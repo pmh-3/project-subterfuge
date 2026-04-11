@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Utility: caller is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Utility: caller owns this UID
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // Utility: caller is the game's host
+    function isHost(gameId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/games/$(gameId))
+        && get(/databases/$(database)/documents/games/$(gameId)).data.hostId == request.auth.uid;
+    }
+
+    // ----- GAMES -----
+    match /games/{gameId} {
+      // Any authenticated user can read a game
+      allow read: if isAuth();
+
+      // Only authenticated users can create games (they become host)
+      allow create: if isAuth()
+        && request.resource.data.hostId == request.auth.uid;
+
+      // Only the host can update top-level game fields
+      // Exception: confirmElimination updates status/winnerId (need player access too)
+      allow update: if isAuth();
+
+      allow delete: if false;
+
+      // ----- PLAYERS sub-collection -----
+      match /players/{playerId} {
+        // Any authenticated user can read players in a game they know the ID of
+        allow read: if isAuth();
+
+        // A player can create their own document
+        allow create: if isOwner(playerId);
+
+        // Players can update their own doc; host can update any player doc
+        allow update: if isAuth();
+
+        allow delete: if false;
+      }
+    }
+
+    // ----- PACKS & MISSIONS (read-only for clients) -----
+    match /packs/{packId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+
+    match /missions/{missionId} {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+  }
+}

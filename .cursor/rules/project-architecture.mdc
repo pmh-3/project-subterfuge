@@ -1,0 +1,62 @@
+---
+description: Core architecture, tech stack, folder structure, and data flow for Project Subterfuge. Provides foundational context every agent needs.
+alwaysApply: true
+---
+
+# Project Subterfuge Architecture
+
+## What This Is
+A social deduction party game (React Native + Expo + Firebase). Players receive secret targets and missions; eliminate your target without getting caught. Web-first, mobile-compatible.
+
+## Tech Stack
+- **Frontend:** React Native 0.81 / Expo 54 / Expo Router 6 (file-based routing)
+- **Backend:** Firebase Firestore (real-time via `onSnapshot`), Firebase Anonymous Auth
+- **Language:** TypeScript 5.9 (strict)
+- **UI:** CSS-in-JS via `StyleSheet.create`, custom `theme.ts` tokens, "Cold War Bureau" aesthetic
+
+## Folder Structure
+```
+client/
+├── app/                          # Expo Router screens (file-based routes)
+│   ├── _layout.tsx               # Root: fonts, auth, error boundary
+│   ├── index.tsx                 # Welcome screen
+│   └── game/
+│       ├── [id].tsx              # Game room (tabs: Contract, Situation Room, Admin)
+│       ├── configure.tsx         # Host: task pack & difficulty config
+│       └── lobby.tsx             # Join / host / identity flow
+├── src/
+│   ├── components/               # Shared UI: Button, Input, Alert, AvatarSelector, ErrorBoundary
+│   ├── constants.ts              # App-wide constants (durations, URLs, defaults)
+│   ├── theme.ts                  # Design tokens (colors, spacing, typography)
+│   ├── types/                    # TypeScript interfaces (Game, Player, TaskPack)
+│   ├── data/                     # Static data: avatars, fallback tasks, seed CSV
+│   ├── features/
+│   │   ├── auth/AuthContext.tsx   # Anonymous auth provider
+│   │   ├── game/
+│   │   │   ├── gameService.ts    # Firestore CRUD (create, join, start, eliminate, etc.)
+│   │   │   ├── gameLogic.ts      # Pure functions (shuffle, target chain, win detection)
+│   │   │   ├── useGame.ts        # Real-time Firestore subscription hook
+│   │   │   └── components/       # Game-specific UI (ContractView, CommandCenterView, etc.)
+│   │   └── tasks/taskService.ts  # Firestore queries for packs/missions
+│   ├── hooks/                    # useAlert, useHoldToConfirm
+│   └── utils/                    # storage.ts, gameUtils.ts, avatarDisplay.ts
+```
+
+## Data Flow
+1. Firestore is the **single source of truth** (no Redux, no Zustand)
+2. `useGame(gameId)` subscribes via `onSnapshot` → returns `{ game, players, loading, error }`
+3. Mutations go through `gameService.ts` → Firestore → `onSnapshot` pushes updates
+4. Local React state is only for UI ephemera (loading flags, input values, modals)
+
+## Key Patterns
+- **Platform abstraction:** Never use `Alert.alert`, `SecureStore`, or `localStorage` directly. Use `useAlert()` and `storage.save/get/delete`.
+- **Feature-based grouping:** Colocate service, hook, components, and types per feature.
+- **Pure logic extraction:** `gameLogic.ts` contains testable pure functions; `gameService.ts` handles only Firestore I/O.
+- **Constants:** Magic numbers go in `src/constants.ts`; colors go in `theme.ts`.
+
+## Running
+```bash
+cd client && npm install && npx expo start --web   # localhost:8081
+npm test                                            # Jest tests
+npm run lint                                        # ESLint
+```

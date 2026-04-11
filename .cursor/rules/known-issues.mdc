@@ -1,0 +1,26 @@
+---
+description: Known bugs, tech debt, and architectural risks that agents should be aware of when making changes.
+alwaysApply: true
+---
+
+# Known Issues & Tech Debt
+
+> Canonical tracking: `docs/BACKLOG.md`. This rule summarizes the issues for quick agent context.
+
+## Active Bugs (fix when touched)
+1. **`startGame` race condition** — Uses `writeBatch` instead of `runTransaction`. A player joining during setup gets no target/task. Convert to transaction when modifying `startGame`.
+2. **`endGame` doesn't clean up alive players** — Remaining ALIVE players keep that status when game completes. Set all non-winner alive players to ELIMINATED.
+3. **Game code collision** — `generateGameCode()` never checks Firestore for duplicates. Add existence check + retry loop.
+
+## Architectural Risks (be aware)
+- **No server-side auth** — Any authenticated client can call `startGame`, `adminForceEliminate`, `endGame`. Host-only enforcement is UI-only. Don't rely on client-side checks for security.
+- **Stale reads outside transactions** — `adminForceEliminate` and `recoverIdentity` read player data outside their transaction. The data could be stale by the time the transaction runs. Move reads inside transactions when refactoring.
+- **`game.playerIds[]` drift** — This array is maintained separately from the `players` subcollection and can diverge. Prefer querying the subcollection as source of truth.
+- **Weak Agent Key** — 3-digit PIN (1000 possibilities). Not secure against brute force. Acceptable for MVP party game.
+
+## Tech Debt
+- No path aliases (long `../../src/...` imports)
+- No CI/CD pipeline
+- No React component tests (only pure logic tested)
+- Firestore rules exist but are permissive (any auth user can update any game/player)
+- No Zod/runtime validation on Firestore data (`as Game` / `as Player` casts)

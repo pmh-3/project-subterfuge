@@ -1,0 +1,415 @@
+pack_id,mission_id,mission_name,difficulty,directive
+basic_training,bt_001,The Orthographist,1,Get the target to spell a word out loud.
+basic_training,bt_002,Zero Hour,1,Get the target to check their watch.
+basic_training,bt_003,The Scribe,1,Get the target to lend you a pen.
+basic_training,bt_004,The Surveyor,2,Get the target to estimate a distance.
+basic_training,bt_005,The Sommelier,1,Get the target to recommend a specific drink.
+basic_training,bt_006,The Contact,1,Get the target to initiate a high-five.
+basic_training,bt_007,The Origin,1,Get the target to mention their hometown.
+basic_training,bt_008,The Signal,2,Get the target to check their phone's signal strength.
+basic_training,bt_009,The Heavy Lifter,2,Get the target to hold your cup.
+basic_training,bt_010,The Scholar,2,Get the target to explain a rule of a sport.
+basic_training,bt_011,The Archivist,2,Get the target to show you the most recent photo on their phone.
+basic_training,bt_012,The Navigator,1,Get the target to give you verbal directions to the bathroom.
+basic_training,bt_013,The Critic,2,Get the target to explain why they prefer a specific brand.
+basic_training,bt_014,The Counter,2,Get the target to count to 10 out loud.
+basic_training,bt_015,The Witness,3,Get the target to describe a person's outfit.
+basic_training,bt_016,The Mint,1,Get the target to lend you a coin.
+basic_training,bt_017,The Alias,1,Get the target to state their childhood nickname.
+basic_training,bt_018,The Thermostat,1,Get the target to complain about the temperature.
+basic_training,bt_019,The Illuminator,1,Get the target to point at a light switch.
+basic_training,bt_020,The Pivot,2,Get the target to swap seats with you.
+basic_training,bt_021,The Locksmith,2,Get the target to show you their keys.
+basic_training,bt_022,The Resume,2,Get the target to tell a story about their first job.
+basic_training,bt_023,The Power Cell,1,Get the target to state their phone battery percentage.
+basic_training,bt_024,The Appraisal,2,Get the target to compliment your outfit.
+basic_training,bt_025,The Purge,1,Get the target to hand you a napkin.
+basic_training,bt_026,The Calendar,2,"Get the target to state today’s date, including the year."
+basic_training,bt_027,The Handler,1,Get the target to name their first pet.
+basic_training,bt_028,The Reader,1,Get the target to describe the last book they have read.
+basic_training,bt_029,The Frequency,1,Get the target to name the artist currently playing on the speakers.
+basic_training,bt_030,The Reflection,2,Get the target to check their reflection in a mirror.
+basic_training,bt_031,The Shredder,2,Get the target to tear a piece of paper.
+basic_training,bt_032,The Bind,3,Get the target to tie a knot.
+basic_training,bt_033,The Current,3,Get the target to plug in a phone charger.
+basic_training,bt_034,The Exposure,2,Get the target to take a photo of you.
+basic_training,bt_035,The Quartermaster,2,Get the target to refill your water glass.
+basic_training,bt_036,The Passport,1,Get the target to name a country they have visited.
+basic_training,bt_037,The Actuary,2,Get the target to solve a math problem out loud.
+basic_training,bt_038,The Protocol,1,Get the target to initiate a fist bump.
+basic_training,bt_039,The Static,2,Get the target to ask for the music volume to be lowered.
+basic_training,bt_040,The Mechanic,3,Get the target to adjust the height of a chair.
+basic_training,bt_041,The Spectrum,1,Get the target to name their favorite color.
+basic_training,bt_042,The Lineage,1,Get the target to state how many siblings they have.
+basic_training,bt_043,The Trigger,2,Get the target to click a retractable pen.
+basic_training,bt_044,The Tripwire,2,Get the target to tie shoelaces.
+basic_training,bt_045,The Rations,1,Get the target to give you food.
+basic_training,bt_046,The Sweetener,1,Get the target to teach you a recipe.
+basic_training,bt_047,The Middleman,1,Get the target to state their middle name.
+basic_training,bt_048,The Murmur,2,Get the target to whisper to you.
+basic_training,bt_049,The Comedy,1,Get the target to laugh at a joke.
+basic_training,bt_050,The Software,1,Get the target to recommend a mobile app.
+basic_training,bt_051,The Gravity,2,Get the target to pick up an item you dropped.
+basic_training,bt_052,The Shutter,2,Get the target to close a window.
+basic_training,bt_053,The Threshold,1,Get the target to open a door for you.
+basic_training,bt_054,The Equinox,1,Get the target to name their favorite season.
+basic_training,bt_055,The Script,2,Get the target to quote a movie.
+basic_training,bt_056,The Freshest,2,Get the target to tell you your breath smells good.
+basic_training,bt_057,The Model,2,Get the target to show you a solo photo of themselves.
+basic_training,bt_058,The Bouncer,2,Get the target to hand you their ID.
+basic_training,bt_059,The Ledger,2,Get the target to show you a receipt.
+basic_training,bt_060,The Wake-Up,3,Get the target to set an alarm on their phone.
+basic_training,bt_061,The Placeholder,2,Get the target to state a page number.
+basic_training,bt_062,The Pact,2,Get the target to pinky-swear.
+basic_training,bt_063,The Linguist,2,Get the target to translate a word into another language.
+basic_training,bt_064,The Blueprint,3,Get the target to draw a circle.
+basic_training,bt_065,The Transit,1,Get the target to state how long their commute is.
+basic_training,bt_066,The Purser,2,Get the target to check for cash.
+basic_training,bt_067,The Cargo,2,Get the target to place an item in a bag.
+basic_training,bt_068,The Encryptor,3,Get the target to change their phone password.
+basic_training,bt_069,The Order,1,Get the target to name their favorite pizza topping.
+basic_training,bt_070,The Frost,1,Get the target to ask for more ice.
+basic_training,bt_071,Posture Check,1,Get the target to adjust their posture.
+basic_training,bt_072,The Optics,2,Get the target to clean their camera lens.
+basic_training,bt_073,The Groomer,2,Get the target to run a hand through their hair.
+basic_training,bt_074,The Concealment,2,Get the target to put their hands in their pockets for 1 minute.
+basic_training,bt_075,The Influencer,1,Get the target to describe their wake up routine.
+basic_training,bt_076,The Thermal,1,Get the target to complain about the temperature.
+basic_training,bt_077,The Bulletin,1,Get the target to name a recent news headline.
+basic_training,bt_078,The Binary,2,Get the target to flip a coin.
+basic_training,bt_079,The Highpoint,2,Get the target to point at the ceiling.
+basic_training,bt_080,The Straw,1,Get the target to roll their tongue.
+basic_training,bt_081,Human Scale,2,Get the target to guess the weight of an object.
+basic_training,bt_082,The Dialect,2,Get the target to perform an accent.
+basic_training,bt_083,Dial Tone,2,Get the target to make a phone call.
+basic_training,bt_084,The Shuffle,2,Get the target to shuffle a deck of cards.
+basic_training,bt_085,The Playbook,2,Get the target to explain a rule of a board game.
+basic_training,bt_086,The Label,2,Get the target to describe the logo a beverage brand.
+basic_training,bt_087,The Sanitize,2,Get the target to wipe a table.
+basic_training,bt_088,The Backlight,2,Get the target to increase their phone brightness.
+basic_training,bt_089,The Queue,2,Get the target to skip a song.
+basic_training,bt_090,The Dossier,1,Get the target to state their birthday only as numbers.
+basic_training,bt_091,Death Metal,2,Get the target to turn up the volume to the max.
+basic_training,bt_092,The Percussionist,2,Get the target to snap on both hands.
+basic_training,bt_093,The Disappearance,2,"Get the target to look for a ""missing"" item for 1 minute."
+basic_training,bt_094,The Trademark,3,Get the target to peel a label off a bottle.
+basic_training,bt_095,The Briefing,1,Get the target to read a sentence out loud from a screen.
+basic_training,bt_096,The Wallpaper,3,Get the target to change their lock screen photo.
+basic_training,bt_097,The Curator,2,Get the target to adjust wall art.
+basic_training,bt_098,The Installation,3,Get the target to open a specific app.
+basic_training,bt_099,The Signature,2,Get the target to write their name.
+party,py_001,The Toast,1,"Get the target to initiate a ""Cheers"" clink with their glass."
+party,py_002,Agent DJ,2,Get the target to choose the next song to be played.
+party,py_003,Paparazzo,2,Get the target to take a selfie with you.
+party,py_004,Fancy Bartender,2,Get the target to place a garnish in your drink.
+party,py_005,The Floor,3,Get the target to sit on the floor.
+party,py_006,The Spotlight,2,Get the target to tell a story to a group of three or more people.
+party,py_007,The Refill,2,Get the target to pour you a drink.
+party,py_008,The Rhythm,2,Get the target to dance for ten seconds.
+party,py_009,Thrift Shop,3,Get the target to wear an article of your clothing.
+party,py_010,BFF,2,Get the target to create a secret handshake.
+party,py_011,The Ignition,3,Get the target to spark a lighter.
+party,py_012,The Scout,2,Get the target to identify a specific guest by name.
+party,py_013,The Hype Man,3,Get the target to shout a specific word you choose.
+party,py_014,The Vendor,1,Get the target to offer you a piece of food.
+party,py_015,The Architect,2,Get the target to stack three cups.
+party,py_016,The Jukebox,2,Get the target to sing a line from a song.
+party,py_017,The Diplomat,2,Get the target to introduce you to a stranger.
+party,py_018,The Coat Check,3,Get the target to carry your coat to another room.
+party,py_019,The Barricade,2,Get the target to move a chair.
+party,py_020,The Prop,2,Get the target to wear a party hat.
+party,py_021,The Courier,2,Get the target to deliver a verbal message to another guest.
+party,py_022,The Overcoat,2,Get the target to hold an article of your clothing.
+party,py_023,The Limelight,1,Get the target to turn on a light.
+party,py_024,The Dealer,2,Get the target to deal a card.
+party,py_025,The Projectionist,2,Get the target to play a video on their phone.
+party,py_026,The Decorator,2,Get the target to straighten a wall decoration.
+party,py_027,The Mixologist,2,Get the target to stir a drink.
+party,py_028,The Collector,1,Get the target to hand you an empty glass.
+party,py_029,The Pilot,3,Get the target to lead a group to another room.
+party,py_030,The Choreographer,3,Get the target to perform a spin.
+party,py_031,The Historian,1,Get the target to state the location of a previous party.
+party,py_032,The Usher,2,Get the target to pull out a chair for you.
+party,py_033,The Promoter,2,Get the target to recommend a specific brand of alcohol.
+party,py_034,The Host,1,Get the target to tell you where to put your trash.
+party,py_035,The Matchmaker,3,Get the target to compliment a stranger's outfit.
+party,py_036,The Taster,2,Get the target to try a snack they haven't touched yet.
+party,py_037,The DJ,2,Get the target to adjust the volume of the music.
+party,py_038,The Guestbook,2,Get the target to write their phone number on a piece of paper.
+party,py_039,The Janitor,1,Get the target to pick up a piece of trash that isn't theirs.
+party,py_040,The Oracle,2,Get the target to predict who will be the next person to arrive.
+party,py_041,The Anchor,3,Get the target to stay in one spot for five minutes while you leave and return.
+party,py_042,The Fan,1,Get the target to fan themselves with an object.
+party,py_043,The Torch,2,Get the target to use their phone's flashlight.
+party,py_044,The Tailor,2,Get the target to fix a stray thread or tag on your clothing.
+party,py_045,The Photographer,2,Get the target to take a photo of a group of people (not including you).
+party,py_046,The Sommelier,1,Get the target to describe the taste of their drink.
+party,py_047,The Timekeeper,2,Get the target to set a timer on their phone.
+party,py_048,The Heavy,2,"Get the target to move a piece of furniture (e.g., a footstool or side table)."
+party,py_049,The Witness,3,"Get the target to admit they saw a specific ""incident"" you made up."
+party,py_050,The Guard,2,Get the target to hold your spot in a line (for food or the bathroom).
+party,py_051,The Chef,1,Get the target to tell you the ingredients of a snack.
+party,py_052,The Exit,3,Get the target to walk you to the door.
+party,py_053,The Excursion,3,Get the target to go for a walk outside.
+party,py_054,The Ritual,2,Get the target to create a secret handshake with you.
+party,py_055,The Actor,3,Get the target to act out a scene from a movie.
+party,py_056,The Affection,2,Get the target to initiate a hug.
+party,py_057,The Melodist,2,Get the target to guess a song that you are humming.
+party,py_058,The Doorman,1,Get the target to open the front door.
+party,py_059,The Duel,1,Get the target to play a game of Rock Paper Scissors.
+party,py_060,The Blemish,1,Get the target to look down at a fake stain on their shirt.
+party,py_061,The High-Five,1,Get the target to initiate a high-five.
+party,py_062,The Butler,2,Get the target to bring you a drink.
+party,py_063,The Romantic,3,Get the target to initiate a kiss.
+party,py_064,The Chug,2,Get the target to finish their drink in one go.
+party,py_065,The DM,3,Get the target to send a direct message to a stranger.
+party,py_066,The Updo,2,Get the target to put their hair in a ponytail.
+party,py_067,The Prisoner,2,Get the target to put their hands behind their head.
+party,py_068,The Signal,2,Get the target to wink at a specific friend.
+party,py_069,The Equilibrist,3,Get the target to balance a spoon on their nose.
+party,py_070,The Gladiator,1,Get the target to engage in a thumb war.
+party,py_071,The Neighbor,1,Get the target to state the host’s last name.
+party,py_072,The Cartographer,2,Get the target to draw a floor plan on a napkin.
+party,py_073,The Saboteur,2,Get the target to blow out a candle.
+party,py_074,The Smuggler,2,Get the target to hide your keys in their pocket.
+party,py_075,The Poison Tester,2,Get the target to take a sip of your drink.
+party,py_076,The Summoner,2,Get the target to whistle out loud.
+party,py_077,The Census,2,Get the target to state the current number of guests in the room.
+party,py_078,The Underwriter,2,Get the target to sign their name on a napkin.
+party,py_079,The Valet,2,Get the target to hang up your coat.
+party,py_080,The Comedian,2,Get the target to tell a joke to a group of three people.
+party,py_081,The Quartermaster,1,Get the target to bring you a coaster.
+party,py_082,The Accomplice,3,Get the target to agree with a false statement you make about your location earlier today.
+party,py_083,The Dentist,1,Get the target to check if there is something in your teeth.
+party,py_084,The Shield,2,Get the target to stand directly behind you for ten seconds.
+party,py_085,The Sentry,2,Get the target to notify you when a specific person enters the room.
+party,py_086,The Glimmer,2,Get the target to turn off a lamp.
+party,py_087,The Informant,3,Get the target to whisper the host's middle name to you.
+party,py_088,The Eulogist,2,Get the target to propose a toast to another person in the room.
+party,py_089,The Caddy,2,Get the target to hold your drink for thirty seconds.
+party,py_090,The Analyst,1,Get the target to read the ingredients on a snack package.
+party,py_091,The Aristocrat,3,Get the target to balance a coaster on their head.
+party,py_092,The Sole,2,Get the target to show you the bottom of their shoe.
+party,py_093,The Glacier,2,Get the target to give you an ice cube from their glass.
+party,py_094,The Cleaner,1,Get the target to wipe a drop of liquid off the table.
+party,py_095,The Thread,1,Get the target to point out a loose thread on your clothing.
+party,py_096,The Rolodex,3,"Get the target to show you a contact in their phone starting with the letter ""S""."
+party,py_097,The Waiter,2,Get the target to clear a plate that isn't theirs.
+party,py_098,The Jester,3,Get the target to perform an impression of another guest.
+party,py_099,The Shade,2,Get the target to put on a pair of sunglasses.
+party,py_100,The Colorist,1,Get the target to hand you a specific colored napkin.
+party,py_101,The Familiar,1,Get the target to state the name of the host's pet.
+party,py_102,The Hydrator,1,Get the target to take a gulp of water.
+party,py_103,The Egress,1,Get the target to point toward the nearest exit.
+party,py_104,The Mixture,1,Get the target to name their favorite cocktail.
+party,py_105,The Hand-Off,3,Get the target to hand their drink to another guest.
+party,py_106,The Timeline,2,Get the target to state the year they met the host.
+party,py_107,The Metronome,2,Get the target to tap a rhythm on the table.
+party,py_108,The Concierge,2,Get the target to hold the door open for another guest.
+ice_breaker,ib_001,The Critic,1,Get the target to recommend a movie.
+ice_breaker,ib_002,The Shared File,2,Get the target to create a shared digital note with you.
+ice_breaker,ib_003,The Startup,2,Get the target to pitch a business idea.
+ice_breaker,ib_004,The Linguist,2,Get the target to teach you a word in another language.
+ice_breaker,ib_005,The Alias,2,Get the target to call you by a made-up nickname.
+ice_breaker,ib_006,The Foodie,1,Get the target to recommend a restaurant.
+ice_breaker,ib_007,The Confessional,1,Get the target to tell a first date story.
+ice_breaker,ib_008,The Referral,2,Get the target to send you a referral code for an app.
+ice_breaker,ib_009,The Reviewer,1,Get the target to recommend a podcast.
+ice_breaker,ib_010,The Commuter,1,Get the target to state how many minutes it took to get here.
+ice_breaker,ib_011,The Itinerary,1,Get the target to name the best city they have ever visited.
+ice_breaker,ib_012,The Alumnus,1,Get the target to state where they went to school.
+ice_breaker,ib_013,The Techie,2,Get the target to show you a specific app on their home screen.
+ice_breaker,ib_014,The Hobbyist,1,Get the target to name their primary hobby outside of work.
+ice_breaker,ib_015,The Forecast,1,Get the target to check the weather forecast for tomorrow.
+ice_breaker,ib_016,The Recommendation,2,Get the target to send you a link to a professional article.
+ice_breaker,ib_017,The Introduction,2,Get the target to introduce you to someone you haven't met.
+ice_breaker,ib_018,The Playlist,1,"Get the target to name their ""guilty pleasure"" song."
+ice_breaker,ib_019,The Debut,1,Get the target to name the first concert they ever attended.
+ice_breaker,ib_020,The Review,1,Get the target to state their opinion on a local coffee shop.
+ice_breaker,ib_021,The Chef,1,Get the target to name the one dish they can cook perfectly.
+ice_breaker,ib_022,The Commute,1,Get the target to state their preferred method of transportation.
+ice_breaker,ib_023,The Mentor,2,Get the target to give you a piece of career advice.
+ice_breaker,ib_024,The Traveler,1,Get the target to name a place they never want to visit again.
+ice_breaker,ib_025,The App,2,Get the target to state which app they use the most.
+ice_breaker,ib_026,The Collection,2,Get the target to name something they used to collect as a child.
+ice_breaker,ib_027,The Cinema,1,Get the target to name a movie that made them cry.
+ice_breaker,ib_028,The First Impression,2,Get the target to guess what your job is.
+ice_breaker,ib_029,The Superpower,2,Get the target to choose between the ability to fly or be invisible.
+ice_breaker,ib_030,The Early Bird,1,Get the target to state what time they woke up today.
+ice_breaker,ib_031,The Playlist,2,Get the target to name a song they find annoying.
+ice_breaker,ib_032,The Landmark,1,Get the target to name a famous monument in their hometown.
+ice_breaker,ib_033,The Skill,2,Get the target to demonstrate a useless talent.
+ice_breaker,ib_034,The Raincheck,2,Get the target to state their favorite way to spend a rainy day.
+ice_breaker,ib_035,The Pet Peeve,2,Get the target to describe one thing that irritates them.
+ice_breaker,ib_036,The Celebrity,1,Get the target to name a famous person they share a birthday with.
+ice_breaker,ib_037,The Interior,2,Get the target to state their favorite room in their house.
+ice_breaker,ib_038,The Routine,1,Get the target to state their morning drink of choice.
+ice_breaker,ib_039,The Vacation,2,Get the target to choose between a beach or a mountain holiday.
+ice_breaker,ib_040,The Upgrade,2,Get the target to name one piece of technology they want to buy.
+ice_breaker,ib_041,The History,2,Get the target to name an era of history they find interesting.
+ice_breaker,ib_042,The Language,2,Get the target to state a word they find difficult to pronounce.
+ice_breaker,ib_043,The Fear,3,Get the target to admit to a common phobia.
+ice_breaker,ib_044,The Gift,2,Get the target to describe the best gift they ever received.
+ice_breaker,ib_045,The Lunch,1,Get the target to state what they ate for lunch.
+ice_breaker,ib_046,The Sport,1,Get the target to name the sports team they support.
+ice_breaker,ib_047,The Genre,1,Get the target to name their favorite type of music.
+ice_breaker,ib_048,The Instrument,1,Get the target to name a musical instrument they wish they could play.
+ice_breaker,ib_049,The Motivation,2,Get the target to state what motivates them to get out of bed.
+ice_breaker,ib_050,The Dessert,1,Get the target to name their favorite dessert.
+ice_breaker,ib_051,The Animal,1,Get the target to name their spirit animal.
+ice_breaker,ib_052,The Scent,2,Get the target to name a smell they find nostalgic.
+ice_breaker,ib_053,The Season,1,Get the target to state their favorite holiday.
+ice_breaker,ib_054,The Dream,3,Get the target to describe a recurring dream.
+ice_breaker,ib_055,The Memory,3,Get the target to describe their earliest childhood memory.
+ice_breaker,ib_056,The Outfit,2,Get the target to state where they bought their shoes.
+ice_breaker,ib_057,The Gadget,2,"Get the target to show you a piece of ""Everyday Carry"" gear."
+ice_breaker,ib_058,The Subscription,2,Get the target to name a streaming service they pay for.
+ice_breaker,ib_059,The Fast Food,1,Get the target to name their favorite fast-food chain.
+ice_breaker,ib_060,The Habit,2,Get the target to admit to a nervous habit.
+ice_breaker,ib_061,The Subject,1,Get the target to name their favorite subject in school.
+ice_breaker,ib_062,The Weekend,1,Get the target to state their plans for the upcoming weekend.
+ice_breaker,ib_063,The Celebrity,2,Get the target to name a celebrity they have met.
+ice_breaker,ib_064,The Recommendation,2,Get the target to recommend a specific brand of water.
+ice_breaker,ib_065,The Accomplishment,3,Get the target to state their proudest moment.
+ice_breaker,ib_066,The Architecture,2,Get the target to point out a building they like.
+ice_breaker,ib_067,The Beverage,1,Get the target to choose between tea or coffee.
+ice_breaker,ib_068,The Instrument,2,Get the target to air-drum a beat.
+ice_breaker,ib_069,The Alarm,2,Get the target to state what time their alarm is set for.
+ice_breaker,ib_070,The Supermarket,1,Get the target to name one item they always buy.
+ice_breaker,ib_071,The Comedy,2,Get the target to name a comedian they think is funny.
+ice_breaker,ib_072,The Rain,1,Get the target to state if they prefer rain or shine.
+ice_breaker,ib_073,The Phone,2,Get the target to state the first app they open in the morning.
+ice_breaker,ib_074,The Secret,3,Get the target to tell you a secret about their job.
+ice_breaker,ib_075,The Fashion,2,Get the target to state their opinion on a current fashion trend.
+ice_breaker,ib_076,The Outdoor,2,Get the target to name their favorite park.
+ice_breaker,ib_077,The Spice,1,Get the target to state their tolerance for spicy food.
+ice_breaker,ib_078,The Night Owl,1,Get the target to state what time they went to bed last night.
+ice_breaker,ib_079,The Fiction,2,Get the target to name a fictional character they relate to.
+ice_breaker,ib_080,The Advice,2,Get the target to state the best advice they ever ignored.
+ice_breaker,ib_081,The Myth,2,Get the target to state if they believe in ghosts.
+ice_breaker,ib_082,The Talent,3,Get the target to whistle a tune.
+ice_breaker,ib_083,The Map,2,Get the target to show you their current location on a map app.
+ice_breaker,ib_084,The Browser,2,Get the target to state how many tabs they currently have open.
+ice_breaker,ib_085,The Nostalgia,2,Get the target to name a toy they loved as a child.
+ice_breaker,ib_086,The Goal,3,Get the target to state one thing they want to achieve this year.
+ice_breaker,ib_087,The Instrument,2,Get the target to name a song they want played at their funeral.
+ice_breaker,ib_088,The Podcast,2,Get the target to name a podcast host they like.
+ice_breaker,ib_089,The Game,1,Get the target to name their favorite board game.
+ice_breaker,ib_090,The Cuisine,1,Get the target to name their favorite international cuisine.
+ice_breaker,ib_091,The Weather,1,Get the target to state the current temperature.
+ice_breaker,ib_092,The Exercise,2,Get the target to state their favorite way to exercise.
+ice_breaker,ib_093,The Sight,2,Get the target to point out the most interesting thing in the room.
+ice_breaker,ib_094,The Sound,2,Get the target to name a sound they find relaxing.
+ice_breaker,ib_095,The Color,1,Get the target to name the color of their first car.
+ice_breaker,ib_096,The Slogan,2,Get the target to recite a commercial jingle.
+ice_breaker,ib_097,The Signature,2,Get the target to describe their own handwriting style.
+ice_breaker,ib_098,The Luck,2,Get the target to state if they have a lucky number.
+ice_breaker,ib_099,The Breakfast,1,Get the target to state what they ate for breakfast.
+ice_breaker,ib_100,The Neighborhood,2,Get the target to name the best thing about their neighborhood.
+ice_breaker,ib_101,The Talent,3,Get the target to snap their fingers.
+ice_breaker,ib_102,The Review,2,Get the target to rate the current vibe of the room from 1-10.
+ice_breaker,ib_103,The Battery,1,Get the target to state their current phone battery percentage.
+ice_breaker,ib_104,The Message,2,Get the target to read the last text they received out loud.
+ice_breaker,ib_105,The Recommendation,2,Get the target to recommend a specific brand of toothpaste.
+ice_breaker,ib_106,The Travel,2,Get the target to name the next place they plan to travel to.
+ice_breaker,ib_107,The Hero,3,Get the target to name their personal hero.
+ice_breaker,ib_108,The Final Word,3,"Get the target to say the word ""Checkmate."""
+far_away,ff_001,The Emoji,1,Get the target to send a crab emoji in the chat.
+far_away,ff_002,The Screenshot,2,Get the target to send a screenshot of their current battery life.
+far_away,ff_003,The Voice Note,2,"Get the target to send a voice note saying ""The eagle has landed."""
+far_away,ff_004,The Wallpaper,2,Get the target to send a photo of their phone's wallpaper.
+far_away,ff_005,The Link,1,Get the target to share a link to a Wikipedia page.
+far_away,ff_006,The Reaction,2,"Get the target to ""Heart"" react to a specific message you sent."
+far_away,ff_007,The Facetime,3,Get the target to initiate a video call with you.
+far_away,ff_008,The Typist,1,Get the target to text you a word in all capital letters.
+far_away,ff_009,The Contact,2,Get the target to send you a contact card for a business.
+far_away,ff_010,The Tag,3,Get the target to tag you in a public social media post.
+far_away,ff_011,The Ping,1,Get the target to reply to your message within 60 seconds.
+far_away,ff_012,The Thumbnail,2,Get the target to send a link to a YouTube video.
+far_away,ff_013,The Status,2,"Get the target to change their status or ""About"" bio."
+far_away,ff_014,The Receipt,3,Get the target to send a screenshot of a digital receipt.
+far_away,ff_015,The Camera,2,Get the target to send a photo of the ceiling.
+far_away,ff_016,The Audio,2,Get the target to send a voice note of them humming.
+far_away,ff_017,The Reaction,1,Get the target to use a specific emoji reaction on your post.
+far_away,ff_018,The Invite,3,Get the target to invite you to a digital calendar event.
+far_away,ff_019,The Search,2,Get the target to share their last Google search result.
+far_away,ff_020,The Avatar,2,Get the target to change their profile picture.
+far_away,ff_021,The Location,3,Get the target to share their live location for 15 minutes.
+far_away,ff_022,The Contact,2,Get the target to send you a specific contact's phone number.
+far_away,ff_023,The App,2,Get the target to recommend a productivity app.
+far_away,ff_024,The Meme,1,Get the target to send a meme featuring an animal.
+far_away,ff_025,The Weather,1,Get the target to send a screenshot of the weather in their city.
+far_away,ff_026,The Dark Mode,2,Get the target to state if they use Dark Mode or Light Mode.
+far_away,ff_027,The Alarm,2,Get the target to send a screenshot of their set alarms.
+far_away,ff_028,The Font,3,Get the target to send a message in a different font style.
+far_away,ff_029,The Link,1,Get the target to send a link to a news article.
+far_away,ff_030,The File,3,Get the target to send a PDF file.
+far_away,ff_031,The Playlist,2,Get the target to share a Spotify or Apple Music playlist.
+far_away,ff_032,The Battery,1,Get the target to state their current laptop battery life.
+far_away,ff_033,The Background,2,Get the target to change their video call background.
+far_away,ff_034,The Poll,2,Get the target to vote in a group chat poll you created.
+far_away,ff_035,The GIF,1,Get the target to send a GIF of a movie character.
+far_away,ff_036,The Screen Time,3,Get the target to send a screenshot of their Screen Time report.
+far_away,ff_037,The Hand,2,Get the target to send a photo of their hand.
+far_away,ff_038,The Notification,2,Get the target to describe the last notification they received.
+far_away,ff_039,The Bluetooth,2,Get the target to name the device they are currently connected to.
+far_away,ff_040,The Tab,2,Get the target to state how many windows they have open.
+far_away,ff_041,The Profile,3,Get the target to add a specific word to their social media bio.
+far_away,ff_042,The Email,2,Get the target to send you an email with a specific subject line.
+far_away,ff_043,The Map,2,Get the target to pin a location on a shared map.
+far_away,ff_044,The Game,2,Get the target to play a round of a chat-based game.
+far_away,ff_045,The Sticker,1,Get the target to send a custom sticker in the chat.
+far_away,ff_046,The Review,2,Get the target to send a link to a product review.
+far_away,ff_047,The Translation,2,Get the target to send a message in a foreign language.
+far_away,ff_048,The Storage,3,Get the target to state how much storage space is left on their phone.
+far_away,ff_049,The Browser,2,Get the target to state their default search engine.
+far_away,ff_050,The Note,2,Get the target to send a photo of a handwritten note.
+far_away,ff_051,The Group,3,Get the target to add a specific person to a group chat.
+far_away,ff_052,The Zoom,2,Get the target to zoom in on their face during a video call.
+far_away,ff_053,The Mute,2,Get the target to mute themselves for 30 seconds.
+far_away,ff_054,The Wallpaper,2,Get the target to send a photo of their desktop wallpaper.
+far_away,ff_055,The Version,2,Get the target to state which OS version they are running.
+far_away,ff_056,The Icon,1,Get the target to send a specific colored heart emoji.
+far_away,ff_057,The Podcast,2,Get the target to send a link to a specific podcast episode.
+far_away,ff_058,The Ticket,3,Get the target to send a screenshot of a movie or event ticket.
+far_away,ff_059,The Calendar,2,Get the target to state what their first meeting is tomorrow.
+far_away,ff_060,The Wifi,1,Get the target to state the name of the Wifi network they are using.
+far_away,ff_061,The Draft,3,Get the target to send a screenshot of an unsent text draft.
+far_away,ff_062,The Call,3,Get the target to call you and hang up after one ring.
+far_away,ff_063,The Tag,2,Get the target to mention you in a group chat.
+far_away,ff_064,The Timezone,1,Get the target to state what time it is for them.
+far_away,ff_065,The Ad,2,Get the target to describe the last ad they saw online.
+far_away,ff_066,The Shop,3,Get the target to add an item to a shared shopping list.
+far_away,ff_067,The Voice,2,Get the target to use a voice filter during a call.
+far_away,ff_068,The Profile,2,Get the target to state their Instagram follower count.
+far_away,ff_069,The Update,2,Get the target to check for a system update.
+far_away,ff_070,The Bookmark,2,Get the target to name one of their bookmarked websites.
+far_away,ff_071,The AirDrop,3,Get the target to AirDrop you a random photo.
+far_away,ff_072,The Clipboard,3,Get the target to paste whatever is currently on their clipboard.
+far_away,ff_073,The Keyboard,2,Get the target to send a message using only predictive text.
+far_away,ff_074,The Flight,2,Get the target to state if their phone is on Flight Mode.
+far_away,ff_075,The Brightness,2,Get the target to turn their screen brightness to maximum.
+far_away,ff_076,The Selfie,2,Get the target to send a selfie wearing a hat.
+far_away,ff_077,The Drawing,3,Get the target to send a digital drawing of a cat.
+far_away,ff_078,The Archive,2,Get the target to show you a photo from exactly one year ago.
+far_away,ff_079,The Captcha,2,Get the target to type a specific sequence of random letters.
+far_away,ff_080,The Subscription,2,Get the target to name a newsletter they subscribe to.
+far_away,ff_081,The Bio,2,Get the target to state what their current WhatsApp bio is.
+far_away,ff_082,The Folder,2,Get the target to name a folder on their phone home screen.
+far_away,ff_083,The Habit,2,Get the target to share their daily average screen time.
+far_away,ff_084,The Silent,1,Get the target to state if their phone is on silent or vibrate.
+far_away,ff_085,The Scan,3,Get the target to send a scan of a document.
+far_away,ff_086,The Reminder,2,"Get the target to set a reminder for ""Meeting with the Operative."""
+far_away,ff_087,The Hotspot,3,Get the target to turn on their personal hotspot.
+far_away,ff_088,The Login,2,Get the target to state what their first ever email address was.
+far_away,ff_089,The Cloud,2,Get the target to state how much cloud storage they use.
+far_away,ff_090,The DM,3,Get the target to message a celebrity on Instagram.
+far_away,ff_091,The Hashtag,2,Get the target to use a specific hashtag in a post.
+far_away,ff_092,The Location,2,Get the target to name the nearest landmark to them.
+far_away,ff_093,The Ping,1,"Get the target to send the ""Wave"" emoji."
+far_away,ff_094,The Lock,2,Get the target to state if they use a 4-digit or 6-digit passcode.
+far_away,ff_095,The Zoom,2,Get the target to share their screen for 5 seconds.
+far_away,ff_096,The History,2,Get the target to name the last thing they bought online.
+far_away,ff_097,The Audio,3,Get the target to record a 10-second clip of background noise.
+far_away,ff_098,The Profile,2,Get the target to state their LinkedIn headline.
+far_away,ff_099,The Finality,3,"Get the target to send the message ""Over and out."""
