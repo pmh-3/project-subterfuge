@@ -1,0 +1,42 @@
+---
+description: React component, hook, and service patterns for the Subterfuge codebase.
+globs: "**/*.tsx,**/*.ts"
+alwaysApply: false
+---
+
+# Component & Code Patterns
+
+## File Placement
+| Type | Location | Example |
+|------|----------|---------|
+| Screen | `app/game/` | `[id].tsx`, `lobby.tsx` |
+| Feature component | `src/features/{feature}/components/` | `ContractView.tsx` |
+| Shared component | `src/components/` | `Button.tsx`, `ErrorBoundary.tsx` |
+| Hook | `src/hooks/` (shared) or `src/features/{feature}/` | `useAlert.ts`, `useGame.ts` |
+| Service | `src/features/{feature}/` | `gameService.ts` |
+| Pure logic | `src/features/{feature}/` | `gameLogic.ts` |
+| Types | `src/types/` | `index.ts`, `taskPack.ts` |
+
+## Component Rules
+- Functional components only (no class components except ErrorBoundary)
+- Colocate `StyleSheet.create` at bottom of same file
+- Props interfaces defined in same file, named `{Component}Props`
+- Use `useHoldToConfirm` hook for press-and-hold interactions (don't reimplement)
+- Use `getAvatarDisplay(avatarId)` from `utils/avatarDisplay.ts` for avatar lookups (don't call `getAvatarById` + `getAvatarComponent` separately)
+
+## Hook Rules
+- Custom hooks go in `src/hooks/` if shared, or feature folder if feature-specific
+- Always clean up subscriptions/timers in `useEffect` return
+- Never call Firestore directly from components — go through service functions
+
+## Service Rules
+- Pure computation → `gameLogic.ts` (no Firebase imports)
+- Firestore I/O → `gameService.ts` (thin wrapper that calls pure logic + writes)
+- New constants → `src/constants.ts`
+- New types → `src/types/`
+
+## Imports
+Use relative imports from the current file location. Common patterns:
+- From screen to src: `../../src/features/game/gameService`
+- From feature component to shared: `../../../theme`, `../../../constants`
+- From src-level: `../utils/storage`, `../hooks/useAlert`

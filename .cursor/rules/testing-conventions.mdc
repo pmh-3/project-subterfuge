@@ -1,0 +1,29 @@
+---
+description: Jest test setup, file placement, and testing patterns for the project.
+globs: "**/__tests__/**,**/jest.config.*"
+alwaysApply: false
+---
+
+# Testing Conventions
+
+## Setup
+- **Runner:** Jest + ts-jest (`npm test` / `npm run test:watch`)
+- **Config:** `client/jest.config.js`, preset `ts-jest`, environment `node`
+- **Test location:** `client/src/__tests__/*.test.ts`
+- **RN mock:** `client/__mocks__/react-native.js` (minimal Platform stub)
+
+## What to Test
+- **Always test:** Pure functions (`gameLogic.ts`, `gameUtils.ts`), data integrity (`avatars.ts`, `tasks.ts`), constants
+- **Test if practical:** Service functions with mocked Firestore
+- **Skip for now:** React components (no RNTL setup yet), hooks with complex RN dependencies
+
+## Conventions
+- One describe block per module, nested describes for sub-functions
+- Test names should read as requirements: `'returns a 4-character string'`, not `'test1'`
+- Probabilistic tests (shuffles, randomness) should run ≥50 iterations and assert variety
+- Use `toEqual` for deep object comparison, `toBe` for primitives and identity
+
+## Adding a Test
+1. Create `src/__tests__/moduleName.test.ts`
+2. Import only from `src/` (never from `app/`)
+3. Run `npm test` and verify all suites pass before committing

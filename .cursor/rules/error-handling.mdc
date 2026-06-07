@@ -1,0 +1,38 @@
+---
+description: Error handling patterns, catch blocks, and user-facing error display conventions.
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# Error Handling
+
+## Catch Blocks
+Never use `catch(e: any)`. Always narrow with `instanceof`:
+
+```typescript
+// ❌ BAD
+} catch (e: any) {
+  showAlert({ title: 'Error', message: e.message });
+}
+
+// ✅ GOOD
+} catch (e) {
+  showAlert({
+    title: 'Operation Failed',
+    message: e instanceof Error ? e.message : 'Unknown error',
+  });
+}
+```
+
+## User-Facing Errors
+- Use `showAlert()` from the `useAlert` hook — never `Alert.alert` or `window.alert`
+- Use thematic titles: "Operation Failed", "Access Denied", "Connection Error" (not generic "Error")
+- Log to console only in dev: `if (__DEV__) console.error(e);`
+
+## Service Layer
+- Throw `new Error('descriptive message')` from `gameService.ts` / `taskService.ts`
+- Let the calling screen component catch and display via `showAlert`
+- Never swallow errors silently (no empty catch blocks)
+
+## Error Boundary
+The root `_layout.tsx` wraps the app in `<ErrorBoundary>`. For new route segments that could fail independently, wrap them in their own `<ErrorBoundary fallbackMessage="...">`.

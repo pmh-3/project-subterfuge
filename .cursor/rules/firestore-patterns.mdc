@@ -1,0 +1,45 @@
+---
+description: Firestore transaction rules, collection paths, and data integrity patterns for game service code.
+globs: "**/gameService.ts,**/taskService.ts,**/useGame.ts,**/firestore.rules"
+alwaysApply: false
+---
+
+# Firestore Patterns
+
+## Collections
+- `games/{gameId}` → `Game` interface
+- `games/{gameId}/players/{uid}` → `Player` interface
+- `packs/{packId}` → `TaskPack` (read-only, seeded)
+- `missions/{missionId}` → missions with `pack_id`, `difficulty`, `directive` (read-only, seeded)
+
+## Transaction Rules (CRITICAL)
+Firestore rejects transactions that interleave reads and writes:
+
+```typescript
+// ✅ CORRECT: all reads first, then all writes
+await runTransaction(db, async (transaction) => {
+  const doc1 = await transaction.get(ref1);
+  const doc2 = await transaction.get(ref2);
+  transaction.update(ref1, { ... });
+  transaction.update(ref2, { ... });
+});
+
+// ❌ WRONG: read after write
+await runTransaction(db, async (transaction) => {
+  const doc1 = await transaction.get(ref1);
+  transaction.update(ref1, { ... });
+  const doc2 = await transaction.get(ref2);  // WILL FAIL
+});
+```
+
+## Known Data Integrity Issues
+- `startGame` uses `writeBatch` not a transaction → race if player joins during setup
+- `game.playerIds[]` can drift from the actual `players` subcollection
+- No server-side host authorization (client-side only for MVP)
+
+## Adding New Mutations
+1. Pure logic goes in `gameLogic.ts` (no Firestore imports)
+2. Firestore I/O goes in `gameService.ts`
+3. Wrap multi-document writes in `runTransaction` when consistency matters
+4. Use `computeEliminationUpdates()` for any elimination-related logic
+5. Use `resolveAvailableTasks()` + `pickRandomTask()` for task selection

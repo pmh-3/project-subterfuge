@@ -1,0 +1,46 @@
+---
+description: Theme token usage, color conventions, and the Cold War Bureau aesthetic for UI components.
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Styling & Theme Conventions
+
+## Color Tokens
+Always use `theme.colors.*` from `src/theme.ts`. Never inline hex or rgba values.
+
+```typescript
+// ❌ BAD
+backgroundColor: 'rgba(212, 201, 176, 0.05)'
+color: '#B58E3D'
+
+// ✅ GOOD
+backgroundColor: theme.colors.surfaceFaint
+color: theme.colors.primary
+```
+
+If you need a new color, add it to `theme.ts` with a semantic name, then reference it.
+
+## Available Token Categories
+- `theme.colors` — palette: `background`, `surface`, `primary`, `text`, `secondary`, `error`, `border`, `overlay`, `paper`, `paperWarm`, `success`, plus semi-transparent variants (`surfaceFaint`, `surfaceTint`, `surfaceMuted`, `surfaceLight`, `primaryFaint`, `successFaint`, `errorFaint`, `holdOverlay`, `statsBackground`, `darkOverlay`, `alertBackground`)
+- `theme.spacing` — `xs(4)`, `sm(8)`, `md(16)`, `lg(24)`, `xl(32)`, `xxl(60)`
+- `theme.typography.fontFamily` — `serif` (Playfair, headers), `mono` (Special Elite, typewriter), `sans` (Inter, labels)
+- `theme.typography.fontSize` — `xs2(10)` through `jumbo(50)`
+
+## Constants
+Animation durations and defaults live in `src/constants.ts`, not inline:
+
+```typescript
+// ❌ BAD
+duration: 1000
+
+// ✅ GOOD
+import { HOLD_DURATION } from '../../src/constants';
+duration: HOLD_DURATION
+```
+
+## Design Rules
+- **No emojis in UI** — use text, symbols, or SVG icons
+- **Cold War Bureau aesthetic** — manila folders, brass borders, typewriter fonts, rubber stamp effects
+- **StyleSheet.create** for all styles — no inline style objects except `{ flex: 1 }` on root containers
+- **Min font size:** 12px body, 20px+ for critical status/actions
