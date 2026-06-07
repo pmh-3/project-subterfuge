@@ -3,7 +3,7 @@ import {
   buildTargetChain,
   detectWin,
   computeEliminationUpdates,
-} from '../features/game/gameLogic';
+} from '@/features/game/gameLogic';
 
 describe('shufflePlayers', () => {
   it('returns the same array reference', () => {

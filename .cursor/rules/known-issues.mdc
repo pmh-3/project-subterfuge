@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Known Issues & Tech Debt
 
-> Canonical tracking: `docs/BACKLOG.md`. This rule summarizes the issues for quick agent context.
+> **Agent entry:** [`AGENTS.md`](../../AGENTS.md) · Canonical tracking: `docs/BACKLOG.md`. This rule summarizes the issues for quick agent context.
 
 ## Active Bugs (fix when touched)
 1. **`startGame` race condition** — Uses `writeBatch` instead of `runTransaction`. A player joining during setup gets no target/task. Convert to transaction when modifying `startGame`.
@@ -23,4 +23,4 @@ alwaysApply: true
 - No CI/CD pipeline
 - No React component tests (only pure logic tested)
 - Firestore rules exist but are permissive (any auth user can update any game/player)
-- No Zod/runtime validation on Firestore data (`as Game` / `as Player` casts)
+- Firestore reads validated via Zod in `@/types/firestoreParse` (Phase 5)

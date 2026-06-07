@@ -6,24 +6,37 @@ alwaysApply: false
 
 # Testing Conventions
 
+**Entry point:** [`AGENTS.md`](../../AGENTS.md)
+
 ## Setup
-- **Runner:** Jest + ts-jest (`npm test` / `npm run test:watch`)
-- **Config:** `client/jest.config.js`, preset `ts-jest`, environment `node`
-- **Test location:** `client/src/__tests__/*.test.ts`
-- **RN mock:** `client/__mocks__/react-native.js` (minimal Platform stub)
+
+- **Runner:** Jest with two projects in `client/jest.config.js`
+  - `unit` — `ts-jest`, `node` env, `**/__tests__/**/*.test.ts`
+  - `components` — `ts-jest`, `jsdom` env, `**/__tests__/components/**/*.test.tsx`, `@testing-library/react-native`
+- **Mocks:** `client/__mocks__/react-native.js` (expanded stub) + `jest.setup.tsx` (safe-area, svg, firebase)
+- **Path alias:** `@/` → `client/src/` in both projects
 
 ## What to Test
-- **Always test:** Pure functions (`gameLogic.ts`, `gameUtils.ts`), data integrity (`avatars.ts`, `tasks.ts`), constants
-- **Test if practical:** Service functions with mocked Firestore
-- **Skip for now:** React components (no RNTL setup yet), hooks with complex RN dependencies
+
+- **Always test:** Pure functions (`gameLogic.ts`, `gameUtils.ts`), Zod boundaries (`firestoreParse.test.ts`), data integrity (`avatars.ts`, `tasks.ts`)
+- **Smoke test:** New screens in `src/__tests__/components/` — mock `expo-router`, auth, layout
+- **Service functions:** Mock Firestore when practical
 
 ## Conventions
-- One describe block per module, nested describes for sub-functions
-- Test names should read as requirements: `'returns a 4-character string'`, not `'test1'`
-- Probabilistic tests (shuffles, randomness) should run ≥50 iterations and assert variety
-- Use `toEqual` for deep object comparison, `toBe` for primitives and identity
 
-## Adding a Test
+- One `describe` per module; test names read as requirements
+- Probabilistic tests: ≥50 iterations for shuffles/randomness
+- Component tests import screens from `app/` via relative path (`../../../app/...`)
+- Run `npm run verify` before committing
+
+## Adding a Unit Test
+
 1. Create `src/__tests__/moduleName.test.ts`
-2. Import only from `src/` (never from `app/`)
-3. Run `npm test` and verify all suites pass before committing
+2. Import via `@/` alias
+3. `npm test`
+
+## Adding a Component Smoke Test
+
+1. Create `src/__tests__/components/MyScreen.test.tsx`
+2. Mock router, auth, and async services
+3. Assert visible copy from `@/strings`

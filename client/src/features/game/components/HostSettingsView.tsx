@@ -1,78 +1,159 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Player } from '../../../types';
-import { Button } from '../../../components/Button';
-import { AgentKeyBadge } from '../../../components/AgentKeyBadge';
-import { theme } from '../../../theme';
-import { strings, dynamicStrings } from '../../../strings';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Player } from '@/types';
+import { INFINITE_KILL_GOAL_OPTIONS } from '@/constants';
+import { sortPlayersByLeaderboard } from '@/features/game/gameLogic';
+import {
+  Text,
+  Button,
+  Stack,
+  ScreenHeader,
+  AgentRow,
+  Rule,
+  PillSegments,
+  colors,
+  space,
+} from '@/design-system';
+import { strings, dynamicStrings } from '@/strings';
 
 interface HostSettingsViewProps {
   players: Player[];
+  hostId: string;
   onForceEliminate: (targetId: string) => void;
   onEndGame?: () => void;
   loading?: boolean;
   endGameLoading?: boolean;
   isGameActive?: boolean;
+  isLobby?: boolean;
+  gameId?: string;
+  onExit?: () => void;
+  isInfinite?: boolean;
+  killGoal?: number;
+  onUpdateKillGoal?: (goal: number) => void;
 }
 
-export const HostSettingsView = ({ 
-  players, 
-  onForceEliminate, 
+export const HostSettingsView = ({
+  players,
+  hostId,
+  onForceEliminate,
   onEndGame,
   loading,
   endGameLoading,
   isGameActive = false,
+  isLobby = false,
+  gameId,
+  onExit,
+  isInfinite = false,
+  killGoal,
+  onUpdateKillGoal,
 }: HostSettingsViewProps) => {
-  const activePlayers = players.filter(p => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION');
+  const router = useRouter();
+  const activePlayers = players.filter(
+    (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION',
+  );
+  const standings = isInfinite ? sortPlayersByLeaderboard(activePlayers) : activePlayers;
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{strings.HOST_OVERRIDE_TITLE}</Text>
-        <Text style={styles.subtitle}>{strings.HOST_OVERRIDE_SUBTITLE}</Text>
-      </View>
+      <ScreenHeader title={strings.HOST_ADMIN_TITLE} />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={styles.sectionTitle}>{dynamicStrings.activeAgentsCount(activePlayers.length)}</Text>
-        
-        {activePlayers.map((player) => (
-          <View key={player.uid} style={styles.row}>
-            <View style={styles.playerInfo}>
-              <Text style={styles.callsign}>{player.callsign}</Text>
-              {player.emergencyPin && (
-                <AgentKeyBadge agentKey={player.emergencyPin} size="sm" />
-              )}
-            </View>
-            <Button 
-              title={strings.HOST_ELIMINATE} 
-              onPress={() => onForceEliminate(player.uid)} 
-              variant="danger" 
-              style={styles.killButton}
-              loading={loading}
-            />
-          </View>
-        ))}
-
-        {activePlayers.length === 0 && (
-          <Text style={styles.emptyText}>{strings.HOST_NO_ACTIVE_AGENTS}</Text>
-        )}
-
-        {/* End Game Button - only during active game */}
-        {isGameActive && onEndGame && (
-          <View style={styles.endGameSection}>
-            <Text style={styles.endGameLabel}>{strings.HOST_TERMINATE_OPERATION}</Text>
-            <Text style={styles.endGameHint}>
-              {strings.HOST_END_GAME_HINT}
-            </Text>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {isLobby && gameId ? (
+          <View style={styles.setupSection}>
             <Button
-              title={strings.HOST_END_OPERATION}
-              onPress={onEndGame}
-              variant="danger"
-              loading={endGameLoading}
-              style={styles.endGameButton}
+              title={strings.GAME_CUSTOMIZE_GAME}
+              onPress={() => router.push(`/game/configure?id=${gameId}`)}
+              variant="ghost"
+              fullWidth
             />
+            <Rule marginVertical={8} />
           </View>
-        )}
+        ) : null}
+
+        {isLobby || isGameActive ? (
+          <>
+            {isGameActive && isInfinite && killGoal != null && onUpdateKillGoal ? (
+              <View style={styles.infiniteSection}>
+                <Text variant="label" muted style={styles.sectionLabel}>
+                  {strings.HOST_MISSION_SUCCESS_LABEL}
+                </Text>
+                <PillSegments
+                  value={String(killGoal)}
+                  onChange={(v) => onUpdateKillGoal(Number(v))}
+                  options={INFINITE_KILL_GOAL_OPTIONS.map((n) => ({
+                    value: String(n),
+                    label: String(n),
+                  }))}
+                />
+                <Rule marginVertical={8} />
+              </View>
+            ) : null}
+
+            <Text variant="label" muted style={styles.sectionLabel}>
+              {isGameActive && isInfinite
+                ? strings.INTEL_LEADERBOARD
+                : dynamicStrings.activeAgentsCount(activePlayers.length)}
+            </Text>
+
+            <Stack gap={3}>
+              {(isGameActive && isInfinite ? standings : activePlayers).map((player) => (
+                <View key={player.uid} style={isGameActive ? styles.row : styles.lobbyRow}>
+                  <AgentRow
+                    callsign={player.callsign}
+                    avatarId={player.avatarId}
+                    isHost={player.uid === hostId}
+                    subtitle={
+                      isGameActive && player.emergencyPin
+                        ? dynamicStrings.agentKeySubtitle(player.emergencyPin)
+                        : undefined
+                    }
+                    style={styles.agentInfo}
+                    trailing={
+                      isGameActive && isInfinite ? (
+                        <Text variant="codeMedium">{String(player.killCount || 0)}</Text>
+                      ) : undefined
+                    }
+                  />
+                  {isGameActive ? (
+                    <Button
+                      title={strings.HOST_ELIMINATE}
+                      onPress={() => onForceEliminate(player.uid)}
+                      variant="danger"
+                      size="sm"
+                      loading={loading}
+                    />
+                  ) : null}
+                </View>
+              ))}
+            </Stack>
+
+            {activePlayers.length === 0 ? (
+              <Text variant="bodySmall" muted style={styles.empty}>
+                {strings.HOST_NO_ACTIVE_AGENTS}
+              </Text>
+            ) : null}
+
+            {isGameActive && onEndGame ? (
+              <View style={styles.endSection}>
+                <Rule marginVertical={8} />
+                <Button
+                  title={strings.HOST_END_OPERATION}
+                  onPress={onEndGame}
+                  variant="danger"
+                  loading={endGameLoading}
+                  fullWidth
+                />
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {onExit ? (
+          <View style={styles.exitSection}>
+            <Button title={strings.GAME_LEAVE} onPress={onExit} variant="ghost" size="sm" fullWidth />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -83,92 +164,45 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingBottom: 20,
+  scroll: {
+    paddingBottom: space[14],
   },
-  title: {
-    color: theme.colors.surface, // Manila
-    fontSize: 24,
-    fontFamily: theme.typography.fontFamily.serif,
-    fontWeight: 'bold',
-    letterSpacing: 4,
+  setupSection: {
+    marginBottom: space[6],
   },
-  subtitle: {
-    color: theme.colors.error,
-    fontSize: 12,
-    fontFamily: theme.typography.fontFamily.sans,
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    color: theme.colors.surface,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.sans,
-    marginBottom: 20,
-    letterSpacing: 1,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.primary,
-    paddingLeft: 10,
+  sectionLabel: {
+    marginBottom: space[5],
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceFaint,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 2,
-    borderLeftColor: theme.colors.secondary,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 2,
+    paddingRight: space[4],
   },
-  playerInfo: {
+  lobbyRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 2,
+  },
+  agentInfo: {
     flex: 1,
-    gap: 6,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
   },
-  callsign: {
-    color: theme.colors.surface,
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    fontFamily: theme.typography.fontFamily.mono,
-  },
-  killButton: {
-    minWidth: 120,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  emptyText: {
-    color: theme.colors.secondary,
+  empty: {
     textAlign: 'center',
-    marginTop: 20,
-    fontStyle: 'italic',
-    fontFamily: theme.typography.fontFamily.serif,
+    marginTop: space[10],
   },
-  endGameSection: {
-    marginTop: 40,
-    paddingTop: 30,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+  endSection: {
+    marginTop: space[8],
   },
-  endGameLabel: {
-    color: theme.colors.error,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    marginBottom: 8,
+  exitSection: {
+    marginTop: space[10],
   },
-  endGameHint: {
-    color: theme.colors.secondary,
-    fontSize: 12,
-    fontFamily: theme.typography.fontFamily.mono,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  endGameButton: {
-    marginTop: 8,
+  infiniteSection: {
+    marginBottom: space[6],
   },
 });

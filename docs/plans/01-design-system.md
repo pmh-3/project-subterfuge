@@ -75,3 +75,51 @@ These bit the original implementation; explicitly check during this phase:
 
 - Modal/Sheet API: declarative `<Modal open=...>` or imperative `useSheet()` hook? Recommend declarative for predictability; existing `useAlert()` stays as a convenience wrapper.
 - `HoldToConfirm` reuses the existing `useHoldToConfirm` hook untouched; only the visual shell changes. Confirm.
+
+## Handoff note
+
+**Completed:** 2026-06-07
+
+### What shipped
+- `client/src/design-system/tokens/` — `colors`, `typography`, `spacing`, `radius`, `elevation`, `motion`, barrel `index.ts`
+- `client/src/design-system/components/` — all 19 primitives: `Text`, `Stack`, `Row`, `Rule`, `Divider`, `Card`, `Button`, `IconButton`, `Input`, `SegmentChips`, `PillSegments`, `HoldToConfirm`, `Avatar`, `Badge`, `AgentRow`, `ScreenHeader`, `NavBar`, `Sheet`/`Modal`, `Alert`
+- `client/src/design-system/index.ts` barrel, `README.md`, `examples/Gallery.tsx`
+- Dev route `app/_dev/gallery.tsx` (redirects to `/` outside `__DEV__`)
+- `src/theme.ts` deprecated shim mapping legacy token names → Midnight Wire equivalents
+- `@/` path alias in `tsconfig.json`, `babel.config.js`, `jest.config.js`
+- `.cursor/rules/design-system.mdc`
+- New fonts loaded in `app/_layout.tsx` (+ web Google Fonts `@import`)
+- `src/__tests__/typography.test.ts` (tracking, Android typewriter bump, label uppercase)
+- `npm run verify` green (30 tests)
+
+### Primitives → legacy component map (Phase 2 codemod)
+| New primitive | Legacy file |
+|---|---|
+| `Button` | `src/components/Button.tsx` |
+| `Input` | `src/components/Input.tsx` |
+| `Alert` / `Sheet` | `src/components/Alert.tsx` |
+| `Avatar` | `src/components/AvatarSelector.tsx` + `avatars/*` |
+| `HoldToConfirm` | inline in `ContractView.tsx` + `useHoldToConfirm` |
+| `AgentRow` | rows in `CommandCenterView.tsx` |
+| `ScreenHeader` | `IdentityHeader.tsx` pattern |
+| `NavBar` | tab bar in `app/game/[id].tsx` |
+| `SegmentChips` / `PillSegments` | `PackSelector.tsx`, configure segments |
+| `Card` folder-tab | `ContractView.tsx` folder tab |
+
+### Decisions made
+- **Modal/Sheet:** declarative `<Sheet open onClose>`; `Modal` is a re-export alias
+- **HoldToConfirm:** reuses `useHoldToConfirm` unchanged; visual shell only
+
+### Deviations
+- None requiring ADR. `theme.ts` shim maps old names to new palette values (screens will look lighter once they read `background`/`surface` through the shim — expected; Phase 2 migrates call sites to primitives).
+- Hold-to-confirm shows "CONFIRMING…" during hold (not live `N%` — hook exposes animated width, not numeric percent; easy add in Phase 2 if needed).
+
+### Screenshots
+- Web gallery: not captured in this environment (no browser automation). Open `http://localhost:8081/_dev/gallery` after `npx expo start --web`.
+- iOS sim: not verified (same constraint as Phase 0).
+
+### Discoveries for Phase 2
+- `AgentKeyBadge` → likely `Badge` + `Text variant="codeMicro"`
+- `BriefingModal` content maps to `Card` + numbered list pattern (`codeMicro` accent + `body`)
+- `PackSelector` modal → `Sheet` + `SegmentChips`
+- Existing `useAlert` can wrap design-system `Alert` when migrating screens

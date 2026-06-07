@@ -1,17 +1,20 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
-import { theme } from '../../../theme';
-import { strings } from '../../../strings';
+import { Animated, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, Button, Stack, Rule, colors, space } from '@/design-system';
+import { ProductLogo, PRODUCT_MARK_SIZES } from '@/components/branding';
+import { APP_URL } from '@/constants';
+import { strings } from '@/strings';
 
 interface AgentKeyRevealProps {
-  agentKey: string; // 3-digit string
-  isNewKey?: boolean; // True if this key was just generated
+  agentKey: string;
   onComplete: () => void;
 }
 
-export const AgentKeyReveal = ({ agentKey, isNewKey = false, onComplete }: AgentKeyRevealProps) => {
+export const AgentKeyReveal = ({ agentKey, onComplete }: AgentKeyRevealProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const displayKey = agentKey.padStart(3, '0');
+  const siteLabel = APP_URL.replace(/^https?:\/\//, '');
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -19,89 +22,62 @@ export const AgentKeyReveal = ({ agentKey, isNewKey = false, onComplete }: Agent
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Text style={styles.title}>
-        {isNewKey ? strings.REVEAL_CREDENTIALS_ASSIGNED : strings.REVEAL_IDENTITY_VERIFIED}
-      </Text>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <View style={styles.hero}>
+          <Stack gap={10} align="center" style={styles.card}>
+            <ProductLogo layout="stacked" markSize={PRODUCT_MARK_SIZES.lg} />
+            <Rule style={styles.rule} />
 
-      <View style={styles.keyBox}>
-        <Text style={styles.keyDigits}>{displayKey}</Text>
-        <Text style={styles.keyLabel}>{strings.REVEAL_AGENT_KEY_LABEL}</Text>
-      </View>
+            <Text variant="codeHero">{displayKey}</Text>
 
-      <Text style={styles.blurb}>
-        {strings.REVEAL_RECOVERY_BLURB}
-      </Text>
+            <Text variant="bodySmall" muted style={styles.blurb}>
+              {strings.REVEAL_SCREENSHOT_BLURB}
+            </Text>
+            <Text variant="metaMicro" muted>
+              {siteLabel}
+            </Text>
+          </Stack>
+        </View>
 
-      <TouchableOpacity
-        onPress={onComplete}
-        style={styles.continueButton}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.continueText}>{strings.REVEAL_PROCEED}</Text>
-      </TouchableOpacity>
-    </Animated.View>
+        <View style={styles.footer}>
+          <Button title={strings.LOBBY_CONTINUE} onPress={onComplete} fullWidth />
+        </View>
+      </Animated.View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: space[10],
+  },
+  hero: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg,
   },
-  title: {
-    color: theme.colors.success,
-    fontSize: theme.typography.fontSize.lg,
-    fontFamily: theme.typography.fontFamily.mono,
-    letterSpacing: 4,
-    marginBottom: 40,
-    textAlign: 'center',
+  card: {
+    width: '100%',
+    maxWidth: 320,
   },
-  keyBox: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  keyDigits: {
-    color: theme.colors.primary,
-    fontSize: 48,
-    fontFamily: theme.typography.fontFamily.mono,
-    fontWeight: 'bold',
-    letterSpacing: 8,
-  },
-  keyLabel: {
-    color: theme.colors.secondary,
-    fontSize: 11,
-    fontFamily: theme.typography.fontFamily.sans,
-    letterSpacing: 4,
-    marginTop: 8,
+  rule: {
+    width: '100%',
+    marginVertical: space[2],
   },
   blurb: {
-    color: theme.colors.surfaceLight,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.mono,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 40,
-    paddingHorizontal: 24,
   },
-  continueButton: {
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 4,
-  },
-  continueText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.mono,
-    letterSpacing: 2,
-    fontWeight: 'bold',
+  footer: {
+    paddingBottom: space[14],
   },
 });

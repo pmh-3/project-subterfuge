@@ -1,4 +1,4 @@
-import { generateGameCode } from '../utils/gameUtils';
+import { generateGameCode } from '@/utils/gameUtils';
 
 describe('generateGameCode', () => {
   it('returns a 4-character string', () => {

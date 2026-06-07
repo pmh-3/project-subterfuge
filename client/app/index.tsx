@@ -1,67 +1,143 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useAuth } from '../src/features/auth/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { theme } from '../src/theme';
-import { strings } from '../src/strings';
+import { useEffect, useRef, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Text,
+  Button,
+  Stack,
+  IconButton,
+  colors,
+  space,
+  Sheet,
+} from '@/design-system';
+import { useLayout } from '@/hooks/useLayout';
+import { strings } from '@/strings';
+import { BriefingView } from '@/features/game/components/BriefingView';
+import { WelcomeTagline } from '@/components/WelcomeTagline';
+import { HELP_BUTTON_PULSE_DURATION } from '@/constants';
 
 export default function WelcomeScreen() {
   const { user, loading, signIn } = useAuth();
   const router = useRouter();
+  const { contentStyle } = useLayout();
+  const [showBriefing, setShowBriefing] = useState(false);
+  const helpPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Auto-initialize if not authenticated
     if (!user && !loading) {
       signIn();
     }
   }, [user, loading]);
 
   useEffect(() => {
-    if (user && !loading) {
-      const timer = setTimeout(() => {
-        router.replace('/game/lobby');
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [user, loading]);
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(helpPulse, {
+          toValue: 1,
+          duration: HELP_BUTTON_PULSE_DURATION,
+          useNativeDriver: false,
+        }),
+        Animated.timing(helpPulse, {
+          toValue: 0,
+          duration: HELP_BUTTON_PULSE_DURATION,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [helpPulse]);
+
+  const helpOpacity = helpPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 1],
+  });
+
+  const helpScale = helpPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.94, 1],
+  });
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{strings.APP_NAME}</Text>
-      
-      <View style={styles.spacer} />
+    <SafeAreaView style={styles.container}>
+      <View style={[styles.topBar, contentStyle]}>
+        <Animated.View style={{ opacity: helpOpacity, transform: [{ scale: helpScale }] }}>
+          <IconButton
+            onPress={() => setShowBriefing(true)}
+            accessibilityLabel={strings.HOME_HELP_LABEL}
+            style={styles.helpButton}
+          >
+            <Text variant="title" style={styles.helpIcon}>
+              ?
+            </Text>
+          </IconButton>
+        </Animated.View>
+      </View>
 
-      <Text style={styles.status}>
-        {loading ? strings.WELCOME_STATUS_LOADING : user ? strings.WELCOME_STATUS_AUTHENTICATED : strings.WELCOME_STATUS_INIT}
-      </Text>
+      <View style={[styles.hero, contentStyle]}>
+        <Text variant="displayHero" style={styles.title}>
+          {strings.HOME_TITLE}
+        </Text>
+        <WelcomeTagline />
+      </View>
 
-      <StatusBar style="light" />
-    </View>
+      <Stack gap={5} style={[styles.actions, contentStyle]}>
+        <Button
+          title={strings.LOBBY_JOIN_OPERATION}
+          onPress={() => router.push('/game/lobby?mode=join-code')}
+          fullWidth
+        />
+        <Button
+          title={strings.LOBBY_START_OPERATION}
+          onPress={() => router.push('/game/lobby?mode=start')}
+          variant="ghost"
+          fullWidth
+        />
+      </Stack>
+
+      <Sheet open={showBriefing} onClose={() => setShowBriefing(false)}>
+        <BriefingView onClose={() => setShowBriefing(false)} showClose />
+      </Sheet>
+
+      <StatusBar style="dark" />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: space[10],
+    paddingBottom: space[14],
+  },
+  topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: space[2],
+  },
+  helpButton: {
+    borderColor: colors.borderStrong,
+  },
+  helpIcon: {
+    lineHeight: 28,
+    marginTop: -2,
+  },
+  hero: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: space[10],
   },
   title: {
-    fontSize: theme.typography.fontSize.xxl,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    fontFamily: theme.typography.fontFamily.serif,
+    fontSize: 58,
+    lineHeight: 58 * 0.95,
   },
-  spacer: {
-    height: theme.spacing.xxl,
-  },
-  status: {
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.sm,
-    letterSpacing: theme.typography.letterSpacing.normal,
-    fontFamily: theme.typography.fontFamily.mono,
+  actions: {
+    width: '100%',
   },
 });

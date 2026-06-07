@@ -1,13 +1,23 @@
-import { db } from '../../services/firebase';
+import { db } from '@/services/firebase';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion, collection, writeBatch, getDocs, runTransaction, query, where, arrayRemove } from 'firebase/firestore';
-import { Game, Player } from '../../types';
-import { generateGameCode } from '../../utils/gameUtils';
-import { TASKS } from '../../data/tasks';
-import { getTasksFromPacks } from '../tasks/taskService';
-import { DifficultySetting } from '../../types/taskPack';
-import { DEFAULT_AVATAR_ID, DEFAULT_MAX_REROLLS, MIN_PLAYERS_TO_START } from '../../constants';
-import { shufflePlayers, buildTargetChain, computeEliminationUpdates } from './gameLogic';
-import { serviceErrors } from '../../strings';
+import { Game, Player } from '@/types';
+import { parseGameOrThrow, parsePlayerOrThrow } from '@/types/firestoreParse';
+import { generateGameCode } from '@/utils/gameUtils';
+import { TASKS } from '@/data/tasks';
+import { getTasksFromPacks } from '@/features/tasks/taskService';
+import { DifficultySetting } from '@/types/taskPack';
+import { DEFAULT_AVATAR_ID, DEFAULT_MAX_REROLLS, MIN_PLAYERS_TO_START, MAX_PLAYERS } from '@/constants';
+import {
+  shufflePlayers,
+  buildTargetChain,
+  computeEliminationUpdates,
+  isClassicMode,
+  isInfiniteMode,
+  computeInstantInfiniteElimination,
+  computeMidGameJoinUpdates,
+  isGameOver,
+} from '@/features/game/gameLogic';
+import { serviceErrors } from '@/strings';
 
 /** Resolves available task strings from configured packs, falling back to local TASKS. */
 const resolveAvailableTasks = async (gameData: Game): Promise<string[]> => {
@@ -35,6 +45,9 @@ export const createGame = async (hostId: string, hostCallsign: string, pin: stri
     status: 'LOBBY',
     playerIds: [hostId],
     createdAt: Date.now(),
+    selectedPacks: ['basic_training'],
+    difficultySetting: 'Mixed',
+    maxRerolls: DEFAULT_MAX_REROLLS,
   };
   
   await setDoc(gameRef, newGame);
@@ -62,11 +75,11 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
     throw new Error(serviceErrors.OPERATION_NOT_FOUND);
   }
 
-  const gameData = gameSnap.data() as Game;
+  const gameData = parseGameOrThrow(gameSnap.data());
 
   const playersRef = collection(db, 'games', gameId, 'players');
   const playersSnap = await getDocs(playersRef);
-  const players = playersSnap.docs.map(d => ({ id: d.id, data: d.data() as Player }));
+  const players = playersSnap.docs.map(d => ({ id: d.id, data: parsePlayerOrThrow(d.data()) }));
 
   const existingPlayer = players.find(p => p.data.callsign.toUpperCase() === callsign.toUpperCase());
 
@@ -81,23 +94,72 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
     return;
   }
 
-  if (gameData.status !== 'LOBBY') {
+  const canJoin =
+    gameData.status === 'LOBBY' ||
+    (isInfiniteMode(gameData) && gameData.status === 'ACTIVE');
+
+  if (!canJoin) {
     throw new Error(serviceErrors.OPERATION_ALREADY_IN_PROGRESS);
   }
 
-  const playerRef = doc(db, 'games', gameId, 'players', playerId);
-  const newPlayer: Player = {
-    uid: playerId,
-    callsign: callsign.trim(),
-    avatarId: avatarId || DEFAULT_AVATAR_ID,
-    status: 'ALIVE',
-    emergencyPin: pin,
-  };
+  if (players.length >= MAX_PLAYERS) {
+    throw new Error(serviceErrors.OPERATION_FULL);
+  }
 
-  await setDoc(playerRef, newPlayer);
+  if (gameData.status === 'LOBBY') {
+    const playerRef = doc(db, 'games', gameId, 'players', playerId);
+    const newPlayer: Player = {
+      uid: playerId,
+      callsign: callsign.trim(),
+      avatarId: avatarId || DEFAULT_AVATAR_ID,
+      status: 'ALIVE',
+      emergencyPin: pin,
+    };
 
-  await updateDoc(gameRef, {
-    playerIds: arrayUnion(playerId)
+    await setDoc(playerRef, newPlayer);
+    await updateDoc(gameRef, { playerIds: arrayUnion(playerId) });
+    return;
+  }
+
+  const availableTasks = await resolveAvailableTasks(gameData);
+
+  await runTransaction(db, async (transaction) => {
+    const gameDoc = await transaction.get(gameRef);
+    if (!gameDoc.exists()) throw new Error(serviceErrors.OPERATION_NOT_FOUND);
+    const freshGame = parseGameOrThrow(gameDoc.data());
+
+    if (!isInfiniteMode(freshGame) || freshGame.status !== 'ACTIVE') {
+      throw new Error(serviceErrors.OPERATION_ALREADY_IN_PROGRESS);
+    }
+
+    const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, freshGame.playerIds);
+    if (allPlayerDocs.length >= MAX_PLAYERS) {
+      throw new Error(serviceErrors.OPERATION_FULL);
+    }
+
+    const allPlayers = allPlayerDocs.map((d) => d.data);
+    const { newPlayerFields, anchorUpdate, anchorId } = computeMidGameJoinUpdates(
+      { uid: playerId, callsign: callsign.trim() },
+      allPlayers,
+      availableTasks,
+    );
+
+    const newPlayerRef = doc(db, 'games', gameId, 'players', playerId);
+    transaction.set(newPlayerRef, {
+      uid: playerId,
+      callsign: callsign.trim(),
+      avatarId: avatarId || DEFAULT_AVATAR_ID,
+      status: 'ALIVE',
+      emergencyPin: pin,
+      killCount: 0,
+      respawnCount: 0,
+      rerollsUsed: 0,
+      ...newPlayerFields,
+    });
+
+    const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
+    transaction.update(anchorRef, anchorUpdate);
+    transaction.update(gameRef, { playerIds: arrayUnion(playerId) });
   });
 };
 
@@ -110,7 +172,7 @@ export const startGame = async (gameId: string): Promise<void> => {
   if (!gameSnap.exists()) {
     throw new Error(serviceErrors.GAME_NOT_FOUND);
   }
-  const gameData = gameSnap.data() as Game;
+  const gameData = parseGameOrThrow(gameSnap.data());
   
   const playersSnap = await getDocs(playersRef);
   
@@ -119,12 +181,14 @@ export const startGame = async (gameId: string): Promise<void> => {
   }
 
   const players: Player[] = [];
-  playersSnap.forEach(d => players.push(d.data() as Player));
+  playersSnap.forEach(d => players.push(parsePlayerOrThrow(d.data())));
   shufflePlayers(players);
 
   const availableTasks = await resolveAvailableTasks(gameData);
   const assignments = buildTargetChain(players, availableTasks);
   const batch = writeBatch(db);
+
+  const isInfinite = isInfiniteMode(gameData);
 
   for (const assignment of assignments) {
     const playerRef = doc(db, 'games', gameId, 'players', assignment.uid);
@@ -134,6 +198,7 @@ export const startGame = async (gameId: string): Promise<void> => {
       taskDescription: assignment.taskDescription,
       status: 'ALIVE',
       rerollsUsed: 0,
+      ...(isInfinite && { killCount: 0, respawnCount: 0 }),
     });
   }
 
@@ -144,14 +209,32 @@ export const startGame = async (gameId: string): Promise<void> => {
 };
 
 export const challengeTarget = async (gameId: string, targetId: string, assassinId: string) => {
+  const gameRef = doc(db, 'games', gameId);
   const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
-  const assassinSnap = await getDoc(assassinRef);
-  const assassinTask = assassinSnap.exists() ? (assassinSnap.data() as Player).taskDescription : undefined;
-
   const targetRef = doc(db, 'games', gameId, 'players', targetId);
+
+  const [gameSnap, assassinSnap, targetSnap] = await Promise.all([
+    getDoc(gameRef),
+    getDoc(assassinRef),
+    getDoc(targetRef),
+  ]);
+
+  if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+  const gameData = parseGameOrThrow(gameSnap.data());
+  if (gameData.status !== 'ACTIVE') throw new Error(serviceErrors.OPERATION_ALREADY_IN_PROGRESS);
+
+  if (!assassinSnap.exists()) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
+  if (!targetSnap.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+
+  const assassin = parsePlayerOrThrow(assassinSnap.data());
+  const target = parsePlayerOrThrow(targetSnap.data());
+
+  if (assassin.status !== 'ALIVE') throw new Error(serviceErrors.PLAYER_NOT_ALIVE);
+  if (target.status !== 'ALIVE') throw new Error(serviceErrors.TARGET_NOT_ALIVE);
+
   await updateDoc(targetRef, {
     pendingEliminationBy: assassinId,
-    ...(assassinTask != null && { pendingTaskDescription: assassinTask }),
+    ...(assassin.taskDescription != null && { pendingTaskDescription: assassin.taskDescription }),
   });
 };
 
@@ -163,22 +246,37 @@ export const denyElimination = async (gameId: string, targetId: string) => {
   });
 };
 
-/**
- * Applies elimination updates (computed by gameLogic) within a Firestore transaction.
- */
-const applyElimination = (
-  transaction: Parameters<Parameters<typeof runTransaction>[1]>[0],
+type Transaction = Parameters<Parameters<typeof runTransaction>[1]>[0];
+
+const readPlayersInTransaction = async (
+  transaction: Transaction,
+  gameId: string,
+  playerIds: string[],
+): Promise<{ id: string; data: Player }[]> => {
+  const results: { id: string; data: Player }[] = [];
+  for (const pid of playerIds) {
+    const ref = doc(db, 'games', gameId, 'players', pid);
+    const snap = await transaction.get(ref);
+    if (snap.exists()) {
+      results.push({ id: pid, data: parsePlayerOrThrow(snap.data()) });
+    }
+  }
+  return results;
+};
+
+const applyClassicElimination = (
+  transaction: Transaction,
   gameId: string,
   targetRef: ReturnType<typeof doc>,
   targetData: Player,
   assassinId: string,
   assassinRef: ReturnType<typeof doc>,
-  assassinDoc: { data: () => any },
+  assassinKillCount: number,
   eliminatedBy: string,
   incrementKillCount: boolean,
 ) => {
   const { targetUpdate, assassinUpdate, isWin } = computeEliminationUpdates(
-    targetData, assassinId, assassinDoc.data()?.killCount || 0, eliminatedBy, incrementKillCount,
+    targetData, assassinId, assassinKillCount, eliminatedBy, incrementKillCount,
   );
 
   transaction.update(targetRef, targetUpdate);
@@ -190,53 +288,238 @@ const applyElimination = (
   }
 };
 
+const applyInfiniteElimination = (
+  transaction: Transaction,
+  gameId: string,
+  game: Game,
+  targetRef: ReturnType<typeof doc>,
+  targetData: Player,
+  assassinId: string,
+  assassinRef: ReturnType<typeof doc>,
+  assassinKillCount: number,
+  allPlayerDocs: { id: string; data: Player }[],
+  tasks: string[],
+  eliminatedBy: string,
+  incrementKillCount: boolean,
+) => {
+  const allPlayers = allPlayerDocs.map((d) => d.data);
+  const { victimUpdate, assassinUpdate, anchorUpdate, anchorId } = computeInstantInfiniteElimination(
+    targetData,
+    assassinId,
+    assassinKillCount,
+    allPlayers,
+    tasks,
+    eliminatedBy,
+    incrementKillCount,
+  );
+
+  transaction.update(targetRef, victimUpdate);
+  transaction.update(assassinRef, assassinUpdate);
+
+  const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
+  transaction.update(anchorRef, anchorUpdate);
+
+  const playersAfter = allPlayers.map((p) => {
+    if (p.uid === targetData.uid) return { ...p, ...victimUpdate, status: 'ALIVE' as const };
+    if (p.uid === assassinId) {
+      return {
+        ...p,
+        ...assassinUpdate,
+        killCount: incrementKillCount ? assassinKillCount + 1 : p.killCount,
+      };
+    }
+    if (p.uid === anchorId) return { ...p, ...anchorUpdate };
+    return p;
+  });
+
+  const { over, winnerId } = isGameOver(game, playersAfter);
+  if (over && winnerId) {
+    const gameRef = doc(db, 'games', gameId);
+    transaction.update(gameRef, { status: 'COMPLETED', winnerId });
+
+    for (const { id } of allPlayerDocs) {
+      const pRef = doc(db, 'games', gameId, 'players', id);
+      if (id === winnerId) {
+        transaction.update(pRef, {
+          status: 'WINNER',
+          targetId: null,
+          targetCallsign: null,
+          taskDescription: 'VICTORY ACHIEVED',
+          pendingEliminationBy: null,
+          pendingTaskDescription: null,
+        });
+      } else {
+        transaction.update(pRef, {
+          status: 'ELIMINATED',
+          pendingEliminationBy: null,
+          pendingTaskDescription: null,
+        });
+      }
+    }
+  }
+};
+
 export const confirmElimination = async (gameId: string, targetId: string) => {
+  const gameRef = doc(db, 'games', gameId);
+  const gameSnap = await getDoc(gameRef);
+  if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+  const availableTasks = await resolveAvailableTasks(parseGameOrThrow(gameSnap.data()));
+
   await runTransaction(db, async (transaction) => {
+    const gameDoc = await transaction.get(gameRef);
+    if (!gameDoc.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+    const game = parseGameOrThrow(gameDoc.data());
+
+    const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, game.playerIds);
+
+    const targetEntry = allPlayerDocs.find((p) => p.id === targetId);
+    if (!targetEntry) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+    const targetData = targetEntry.data;
     const targetRef = doc(db, 'games', gameId, 'players', targetId);
-    const targetDoc = await transaction.get(targetRef);
-    if (!targetDoc.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
-    const targetData = targetDoc.data() as Player;
 
     const assassinId = targetData.pendingEliminationBy;
     if (!assassinId) throw new Error(serviceErrors.NO_PENDING_ELIMINATION);
 
+    const assassinEntry = allPlayerDocs.find((p) => p.id === assassinId);
+    if (!assassinEntry) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
+    const assassinData = assassinEntry.data;
     const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
-    const assassinDoc = await transaction.get(assassinRef);
-    if (!assassinDoc.exists()) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
 
-    applyElimination(transaction, gameId, targetRef, targetData, assassinId, assassinRef, assassinDoc, assassinId, true);
+    if (isClassicMode(game)) {
+      applyClassicElimination(
+        transaction,
+        gameId,
+        targetRef,
+        targetData,
+        assassinId,
+        assassinRef,
+        assassinData.killCount || 0,
+        assassinId,
+        true,
+      );
+    } else {
+      applyInfiniteElimination(
+        transaction,
+        gameId,
+        game,
+        targetRef,
+        targetData,
+        assassinId,
+        assassinRef,
+        assassinData.killCount || 0,
+        allPlayerDocs,
+        availableTasks,
+        assassinId,
+        true,
+      );
+    }
   });
 };
 
 export const adminForceEliminate = async (gameId: string, targetId: string) => {
+  const gameRef = doc(db, 'games', gameId);
+  const gameSnap = await getDoc(gameRef);
+  if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+  const game = parseGameOrThrow(gameSnap.data());
+  const availableTasks = await resolveAvailableTasks(game);
+
   const playersRef = collection(db, 'games', gameId, 'players');
   const snapshot = await getDocs(playersRef);
-  const players = snapshot.docs.map(d => d.data() as Player);
+  const players = snapshot.docs.map((d) => parsePlayerOrThrow(d.data()));
 
-  const assassin = players.find(p => p.targetId === targetId && (p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION'));
+  const assassin = players.find(
+    (p) => p.targetId === targetId && (p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION'),
+  );
 
   if (!assassin) {
     const targetRef = doc(db, 'games', gameId, 'players', targetId);
-    await updateDoc(targetRef, { 
-      status: 'ELIMINATED', 
-      eliminatedBy: 'ADMIN',
-      eliminatedAt: Date.now()
-    });
-    return; 
+    if (isInfiniteMode(game)) {
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        const freshGame = parseGameOrThrow(gameDoc.data());
+        const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, freshGame.playerIds);
+        const targetEntry = allPlayerDocs.find((p) => p.id === targetId);
+        if (!targetEntry) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+        const targetData = targetEntry.data;
+
+        const aliveExceptVictim = allPlayerDocs
+          .map((d) => d.data)
+          .filter((p) => p.status === 'ALIVE' && p.uid !== targetId);
+        if (aliveExceptVictim.length === 0) return;
+
+        const { newPlayerFields, anchorUpdate, anchorId } = computeMidGameJoinUpdates(
+          targetData,
+          allPlayerDocs.map((d) => d.data),
+          availableTasks,
+        );
+        transaction.update(targetRef, {
+          status: 'ALIVE',
+          eliminatedBy: 'ADMIN',
+          eliminatedAt: Date.now(),
+          respawnCount: (targetData.respawnCount || 0) + 1,
+          pendingEliminationBy: null,
+          pendingTaskDescription: null,
+          ...newPlayerFields,
+        });
+        const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
+        transaction.update(anchorRef, anchorUpdate);
+      });
+    } else {
+      await updateDoc(targetRef, {
+        status: 'ELIMINATED',
+        eliminatedBy: 'ADMIN',
+        eliminatedAt: Date.now(),
+      });
+    }
+    return;
   }
 
   const assassinId = assassin.uid;
 
   await runTransaction(db, async (transaction) => {
+    const gameDoc = await transaction.get(gameRef);
+    const freshGame = parseGameOrThrow(gameDoc.data());
+
+    const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, freshGame.playerIds);
+
+    const targetEntry = allPlayerDocs.find((p) => p.id === targetId);
+    if (!targetEntry) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+    const targetData = targetEntry.data;
     const targetRef = doc(db, 'games', gameId, 'players', targetId);
-    const targetDoc = await transaction.get(targetRef);
-    if (!targetDoc.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
-    const targetData = targetDoc.data() as Player;
 
+    const assassinEntry = allPlayerDocs.find((p) => p.id === assassinId);
+    if (!assassinEntry) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
+    const assassinData = assassinEntry.data;
     const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
-    const assassinDoc = await transaction.get(assassinRef);
 
-    applyElimination(transaction, gameId, targetRef, targetData, assassinId, assassinRef, assassinDoc, 'ADMIN', false);
+    if (isClassicMode(freshGame)) {
+      applyClassicElimination(
+        transaction,
+        gameId,
+        targetRef,
+        targetData,
+        assassinId,
+        assassinRef,
+        assassinData.killCount || 0,
+        'ADMIN',
+        false,
+      );
+    } else {
+      applyInfiniteElimination(
+        transaction,
+        gameId,
+        freshGame,
+        targetRef,
+        targetData,
+        assassinId,
+        assassinRef,
+        assassinData.killCount || 0,
+        allPlayerDocs,
+        availableTasks,
+        'ADMIN',
+        false,
+      );
+    }
   });
 };
 
@@ -252,9 +535,13 @@ export const scrambleTask = async (gameId: string, playerId: string) => {
   if (!playerSnap.exists()) throw new Error(serviceErrors.PLAYER_NOT_FOUND);
   if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
   
-  const playerData = playerSnap.data() as Player;
-  const gameData = gameSnap.data() as Game;
-  
+  const playerData = parsePlayerOrThrow(playerSnap.data());
+  const gameData = parseGameOrThrow(gameSnap.data());
+
+  if (playerData.status !== 'ALIVE') {
+    throw new Error(serviceErrors.PLAYER_NOT_ALIVE);
+  }
+
   const maxRerolls = gameData.maxRerolls ?? DEFAULT_MAX_REROLLS;
   const currentRerolls = playerData.rerollsUsed || 0;
   
@@ -279,19 +566,19 @@ export const recoverIdentity = async (gameId: string, pin: string, newUid: strin
   if (snapshot.empty) throw new Error(serviceErrors.INVALID_RECOVERY_PIN);
   
   const oldDoc = snapshot.docs[0];
-  const oldData = oldDoc.data() as Player;
+  const oldData = parsePlayerOrThrow(oldDoc.data());
   const oldUid = oldData.uid;
 
   if (oldUid === newUid) return; // Already recovered
 
   const allPlayersSnap = await getDocs(playersRef);
-  const allPlayers = allPlayersSnap.docs.map(d => d.data() as Player);
+  const allPlayers = allPlayersSnap.docs.map(d => parsePlayerOrThrow(d.data()));
 
   await runTransaction(db, async (transaction) => {
     // CRITICAL: ALL READS MUST COME FIRST
     const gameRef = doc(db, 'games', gameId);
     const gameDoc = await transaction.get(gameRef);
-    const gameData = gameDoc.data() as Game;
+    const gameData = parseGameOrThrow(gameDoc.data());
     
     // NOW DO ALL WRITES
     // 1. Delete old player document
@@ -327,22 +614,48 @@ export const recoverIdentity = async (gameId: string, pin: string, newUid: strin
 };
 
 /**
- * End the game early (host override)
- * Winner is determined by highest kill count
- * No winner if tie or all zeros
+ * End an infinite game — sets all non-winners to ELIMINATED.
  */
-export const endGame = async (gameId: string): Promise<void> => {
+export const endInfiniteGame = async (gameId: string, winnerId?: string | null): Promise<void> => {
   const gameRef = doc(db, 'games', gameId);
-  const playersRef = collection(db, 'games', gameId, 'players');
-  const playersSnap = await getDocs(playersRef);
-  
-  const players: Player[] = [];
-  playersSnap.forEach(doc => players.push(doc.data() as Player));
-  
-  // Find player(s) with highest kill count
+
+  await runTransaction(db, async (transaction) => {
+    const gameDoc = await transaction.get(gameRef);
+    const game = parseGameOrThrow(gameDoc.data());
+    const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, game.playerIds);
+
+    transaction.update(gameRef, {
+      status: 'COMPLETED',
+      winnerId: winnerId ?? null,
+    });
+
+    for (const playerDoc of allPlayerDocs) {
+      const pRef = doc(db, 'games', gameId, 'players', playerDoc.id);
+
+      if (winnerId && playerDoc.id === winnerId) {
+        transaction.update(pRef, {
+          status: 'WINNER',
+          targetId: null,
+          targetCallsign: null,
+          taskDescription: 'VICTORY ACHIEVED',
+          pendingEliminationBy: null,
+          pendingTaskDescription: null,
+        });
+      } else {
+        transaction.update(pRef, {
+          status: 'ELIMINATED',
+          pendingEliminationBy: null,
+          pendingTaskDescription: null,
+        });
+      }
+    }
+  });
+};
+
+const resolveTopKiller = (players: Player[]): { winnerId: string | null } => {
   let maxKills = 0;
   let topKillers: Player[] = [];
-  
+
   for (const player of players) {
     const kills = player.killCount || 0;
     if (kills > maxKills) {
@@ -352,34 +665,51 @@ export const endGame = async (gameId: string): Promise<void> => {
       topKillers.push(player);
     }
   }
-  
-  const batch = writeBatch(db);
-  
-  // Determine winner: only if exactly one player has the most kills and kills > 0
+
   if (topKillers.length === 1 && maxKills > 0) {
-    const winner = topKillers[0];
-    
-    // Update winner
-    const winnerRef = doc(db, 'games', gameId, 'players', winner.uid);
+    return { winnerId: topKillers[0]!.uid };
+  }
+  return { winnerId: null };
+};
+
+/**
+ * End the game early (host override)
+ * Winner is determined by highest kill count
+ * No winner if tie or all zeros
+ */
+export const endGame = async (gameId: string): Promise<void> => {
+  const gameRef = doc(db, 'games', gameId);
+  const gameSnap = await getDoc(gameRef);
+  if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+  const game = parseGameOrThrow(gameSnap.data());
+
+  const playersRef = collection(db, 'games', gameId, 'players');
+  const playersSnap = await getDocs(playersRef);
+
+  const players: Player[] = [];
+  playersSnap.forEach((d) => players.push(parsePlayerOrThrow(d.data())));
+
+  if (isInfiniteMode(game)) {
+    const { winnerId } = resolveTopKiller(players);
+    await endInfiniteGame(gameId, winnerId);
+    return;
+  }
+
+  const { winnerId } = resolveTopKiller(players);
+  const batch = writeBatch(db);
+
+  if (winnerId) {
+    const winnerRef = doc(db, 'games', gameId, 'players', winnerId);
     batch.update(winnerRef, {
       status: 'WINNER',
       targetId: null,
       targetCallsign: null,
       taskDescription: 'VICTORY ACHIEVED',
     });
-    
-    // Update game with winner
-    batch.update(gameRef, {
-      status: 'COMPLETED',
-      winnerId: winner.uid,
-    });
+    batch.update(gameRef, { status: 'COMPLETED', winnerId });
   } else {
-    // No clear winner (tie or no kills)
-    batch.update(gameRef, {
-      status: 'COMPLETED',
-      winnerId: null,
-    });
+    batch.update(gameRef, { status: 'COMPLETED', winnerId: null });
   }
-  
+
   await batch.commit();
 };

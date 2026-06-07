@@ -5,9 +5,10 @@
  */
 
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../services/firebase';
-import { Task, TaskPack, DifficultySetting, DIFFICULTY_SCALE_MAP } from '../../types/taskPack';
-import { taskPackStrings } from '../../strings';
+import { db } from '@/services/firebase';
+import { Task, TaskPack, DifficultySetting, DIFFICULTY_SCALE_MAP } from '@/types/taskPack';
+import { parseTaskPack } from '@/types/firestoreParse';
+import { taskPackStrings } from '@/strings';
 
 const PACKS_COLLECTION = 'packs';
 const MISSIONS_COLLECTION = 'missions';
@@ -64,14 +65,15 @@ export const fetchTaskPacks = async (): Promise<TaskPack[]> => {
     const packId = doc.id;
     const metadata = PACK_METADATA[packId] || { description: taskPackStrings.fallback_description, difficulty: taskPackStrings.fallback_difficulty };
     
-    packs.push({ 
-      id: packId, 
+    const parsed = parseTaskPack({
+      id: packId,
       displayName: data.display_name,
       isPremium: data.is_premium,
       description: metadata.description,
       difficulty: metadata.difficulty,
-      tasks: missionsByPack[packId] || []
-    } as TaskPack);
+      tasks: missionsByPack[packId] || [],
+    });
+    if (parsed) packs.push(parsed);
   });
   
   return packs;

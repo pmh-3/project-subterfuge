@@ -1,0 +1,29 @@
+---
+description: Midnight Wire design system — tokens, primitives, lint tripwires
+globs: client/app/**,client/src/**
+---
+
+# Design System Rules
+
+**Entry point:** [`AGENTS.md`](../../AGENTS.md) · **Source of truth:** `docs/plans/DESIGN_SYSTEM.md`  
+**Implementation:** `client/src/design-system/` — import via `@/design-system`
+
+## Required patterns
+
+- Use design-system tokens (`colors`, `space`, `radius`, `<Text variant="…" />`) — not inline hex/rgba in `client/app/**` or `client/src/features/**`
+- All UI code uses `@/design-system` primitives and tokens
+- No `shadowColor`, `shadowOpacity`, `shadowRadius`, `shadowOffset`, or `elevation > 0`
+- No gradients or decorative textures
+- `accent` / olive only for **active** states — never static decoration
+- Section breaks: `Rule` (1px horizontal), not new background panels
+- Typewriter font (`label*`, `metaMicro`) for metadata only — not body copy
+
+## Primitives
+
+`Button`, `IconButton`, `Input`, `Card`, `Rule`, `Stack`, `Row`, `Text`, `Divider`, `Badge`, `Sheet`/`Modal`, `Alert`, `Avatar`, `ScreenHeader`, `NavBar`, `AgentRow`, `SegmentChips`, `PillSegments`, `HoldToConfirm`
+
+Gallery (dev): `/_dev/gallery`
+
+## Legacy
+
+`src/theme.ts` was removed in Phase 2. Use `@/design-system` only.

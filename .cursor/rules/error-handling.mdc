@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Error Handling
 
+**Entry point:** [`AGENTS.md`](../../AGENTS.md)
+
 ## Catch Blocks
 Never use `catch(e: any)`. Always narrow with `instanceof`:
 

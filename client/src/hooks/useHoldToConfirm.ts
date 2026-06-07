@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Animated } from 'react-native';
-import { HOLD_DURATION, HOLD_RESET_DURATION } from '../constants';
+import { HOLD_DURATION, HOLD_RESET_DURATION } from '@/constants';
 
 /**
  * Shared press-and-hold interaction pattern.

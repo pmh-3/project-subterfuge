@@ -1,50 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../src/components/Button';
-import { Input } from '../../src/components/Input';
-import { AvatarSelector } from '../../src/components/AvatarSelector';
-import { useAuth } from '../../src/features/auth/AuthContext';
-import { createGame, joinGame } from '../../src/features/game/gameService';
-import { storage } from '../../src/utils/storage';
-import { theme } from '../../src/theme';
-import { useAlert } from '../../src/hooks/useAlert';
-import { strings, dynamicStrings } from '../../src/strings';
-import { getDefaultAvatar } from '../../src/data/avatars';
-import { BriefingModal } from '../../src/features/game/components/BriefingModal';
-import { AgentKeyReveal } from '../../src/features/game/components/AgentKeyReveal';
+import {
+  Text,
+  Button,
+  Input,
+  Avatar,
+  Stack,
+  Row,
+  Banner,
+  colors,
+  space,
+} from '@/design-system';
+import { useAuth } from '@/features/auth/AuthContext';
+import { createGame, joinGame } from '@/features/game/gameService';
+import { storage } from '@/utils/storage';
+import { useLayout } from '@/hooks/useLayout';
+import { strings, dynamicStrings, serviceErrors } from '@/strings';
+import { AVATARS, getRandomAvatar } from '@/data/avatars';
+import { AgentKeyReveal } from '@/features/game/components/AgentKeyReveal';
 
 type Mode = null | 'join-code' | 'join' | 'join-recover' | 'start' | 'reveal';
-type RevealContext = 'join' | 'create';
 
 export default function LobbyScreen() {
   const { user, loading: authLoading, signIn } = useAuth();
-  const { showAlert, AlertComponent } = useAlert();
-  const { code: urlCode } = useLocalSearchParams<{ code?: string }>();
-  
-  // Identity state
+  const { contentStyle, contentMinHeight } = useLayout();
+  const { code: urlCode, mode: urlMode } = useLocalSearchParams<{ code?: string; mode?: string }>();
+
   const [callsign, setCallsign] = useState('');
   const [agentKey, setAgentKey] = useState('');
-  const [recoveryKey, setRecoveryKey] = useState(''); // Separate state for manual key entry
-  const [avatarId, setAvatarId] = useState(getDefaultAvatar().id);
-  
-  // Join-specific state
+  const [recoveryKey, setRecoveryKey] = useState('');
+  const [avatarId, setAvatarId] = useState(() => getRandomAvatar().id);
   const [operationCode, setOperationCode] = useState('');
-  
-  // UI state
   const [mode, setMode] = useState<Mode>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
-  const [showBriefing, setShowBriefing] = useState(false);
   const [pendingGameId, setPendingGameId] = useState<string | null>(null);
-  const [isNewKey, setIsNewKey] = useState(false);
-  const [revealContext, setRevealContext] = useState<RevealContext>('join');
-  
+  const [inlineError, setInlineError] = useState<string | null>(null);
+
   const router = useRouter();
 
-  // Auto sign-in if user lands here directly
   useEffect(() => {
     if (!user && !authLoading) {
       signIn();
@@ -55,87 +52,83 @@ export default function LobbyScreen() {
     loadIdentity();
   }, []);
 
-  // Pre-fill operation code from URL param (deep link)
   useEffect(() => {
     if (urlCode) {
       setOperationCode(urlCode.toUpperCase());
       setMode('join');
+    } else if (urlMode === 'join-code') {
+      setMode('join-code');
+    } else if (urlMode === 'start') {
+      setMode('start');
     }
-  }, [urlCode]);
+  }, [urlCode, urlMode]);
+
+  useEffect(() => {
+    if (!mode && !urlCode && !urlMode) {
+      router.replace('/');
+    }
+  }, [mode, urlCode, urlMode, router]);
 
   const loadIdentity = async () => {
     const savedCallsign = await storage.get('user_callsign');
     const savedPin = await storage.get('user_pin');
     const savedAvatarId = await storage.get('user_avatar');
-    
+
     if (savedCallsign) setCallsign(savedCallsign);
-    // Only use saved PIN if it's exactly 3 digits - don't migrate old 4-digit PINs
     if (savedPin && savedPin.length === 3 && /^\d{3}$/.test(savedPin)) {
       setAgentKey(savedPin);
     }
     if (savedAvatarId) setAvatarId(savedAvatarId);
   };
 
-  // Generate a random 3-digit Agent Key
   const generateAgentKey = (): string => {
     const randomNum = Math.floor(Math.random() * 1000);
     return String(randomNum).padStart(3, '0');
   };
 
-  // Get or create Agent Key (returns existing or generates new)
   const getOrCreateAgentKey = async (): Promise<string> => {
-    // If we already have a valid 3-digit numeric key loaded, use it
     if (agentKey && agentKey.length === 3 && /^\d{3}$/.test(agentKey)) {
-      setIsNewKey(false);
       return agentKey;
     }
-    // Otherwise generate a new one
     const newKey = generateAgentKey();
     setAgentKey(newKey);
-    setIsNewKey(true);
     await storage.save('user_pin', newKey);
     return newKey;
   };
 
-  const validateIdentity = () => {
-    if (!callsign.trim() || callsign.trim().length < 1) {
-      showAlert({
-        title: strings.ALERT_INVALID_CALLSIGN_TITLE,
-        message: strings.ALERT_INVALID_CALLSIGN_MESSAGE,
-      });
+  const validateIdentity = (): boolean => {
+    if (!callsign.trim()) {
+      setInlineError(strings.LOBBY_NAME_REQUIRED);
       return false;
     }
     if (!user || authLoading) {
-      showAlert({
-        title: strings.ALERT_ESTABLISHING_CONNECTION_TITLE,
-        message: strings.ALERT_ESTABLISHING_CONNECTION_MESSAGE,
-      });
+      setInlineError(strings.LOBBY_CONNECTING);
       if (!user && !authLoading) signIn();
       return false;
     }
     return true;
   };
 
+  const goToGame = (gameId: string) => {
+    router.push(`/game/${gameId}`);
+  };
+
   const handleCreate = async () => {
     if (!validateIdentity()) return;
-    
+
     setCreateLoading(true);
+    setInlineError(null);
     try {
-      // Get existing or generate new Agent Key
       const key = await getOrCreateAgentKey();
       await storage.save('user_callsign', callsign.trim());
       await storage.save('user_avatar', avatarId);
-      
+
       const newGameId = await createGame(user!.uid, callsign, key, avatarId);
       setPendingGameId(newGameId);
-      setRevealContext('create'); // Host goes to configure after reveal
       setMode('reveal');
     } catch (e) {
       if (__DEV__) console.error(e);
-      showAlert({
-        title: strings.ALERT_OPERATION_FAILED_TITLE,
-        message: e instanceof Error ? e.message : strings.ALERT_OPERATION_FAILED_INIT,
-      });
+      setInlineError(e instanceof Error ? e.message : strings.ALERT_OPERATION_FAILED_INIT);
     } finally {
       setCreateLoading(false);
     }
@@ -144,75 +137,59 @@ export default function LobbyScreen() {
   const handleJoin = async () => {
     if (!validateIdentity()) return;
     if (operationCode.length !== 4) {
-      showAlert({
-        title: strings.ALERT_INVALID_CODE_TITLE,
-        message: strings.ALERT_INVALID_CODE_MESSAGE,
-      });
+      setInlineError(strings.LOBBY_CODE_REQUIRED);
       return;
     }
 
     setJoinLoading(true);
+    setInlineError(null);
     try {
-      // Get existing or generate new Agent Key
       const key = await getOrCreateAgentKey();
       await storage.save('user_callsign', callsign.trim());
       await storage.save('user_avatar', avatarId);
-      
+
       const code = operationCode.toUpperCase();
       await joinGame(code, user!.uid, callsign, key, avatarId);
-      setPendingGameId(code);
-      setRevealContext('join'); // Players go to game after reveal
-      setMode('reveal');
+      goToGame(code);
     } catch (e) {
       if (__DEV__) console.error(e);
       const message = e instanceof Error ? e.message : '';
       if (message.includes('Identity active') || message.includes('Invalid credentials')) {
         setMode('join-recover');
         setRecoveryKey('');
+      } else if (message.includes(serviceErrors.OPERATION_NOT_FOUND)) {
+        setInlineError(strings.LOBBY_GAME_NOT_FOUND);
       } else {
-        showAlert({
-          title: strings.ALERT_ACCESS_DENIED_TITLE,
-          message: message || strings.ALERT_ACCESS_DENIED_JOIN,
-        });
+        setInlineError(message || strings.ALERT_ACCESS_DENIED_JOIN);
       }
     } finally {
       setJoinLoading(false);
     }
   };
 
-  // Handle rejoin with manually entered Agent Key
   const handleRecoverJoin = async () => {
     if (!validateIdentity()) return;
     if (recoveryKey.length !== 3 || !/^\d{3}$/.test(recoveryKey)) {
-      showAlert({
-        title: strings.ALERT_INVALID_KEY_TITLE,
-        message: strings.ALERT_INVALID_KEY_MESSAGE,
-      });
+      setInlineError(strings.ALERT_INVALID_KEY_MESSAGE);
       return;
     }
 
     setJoinLoading(true);
+    setInlineError(null);
     try {
       await storage.save('user_callsign', callsign.trim());
       await storage.save('user_avatar', avatarId);
-      
+
       const code = operationCode.toUpperCase();
       await joinGame(code, user!.uid, callsign, recoveryKey, avatarId);
-      
-      // Recovery successful - save this key for future use
+
       setAgentKey(recoveryKey);
       await storage.save('user_pin', recoveryKey);
-      setIsNewKey(false);
-      
-      setPendingGameId(code);
-      setRevealContext('join'); // Recovered players go to game after reveal
-      setMode('reveal');
+
+      goToGame(code);
     } catch (e) {
       if (__DEV__) console.error(e);
-      showAlert({
-        title: strings.ALERT_ACCESS_DENIED_TITLE,
-        message: e instanceof Error ? e.message : strings.ALERT_ACCESS_DENIED_INVALID_KEY,
-      });
+      setInlineError(e instanceof Error ? e.message : strings.ALERT_ACCESS_DENIED_INVALID_KEY);
     } finally {
       setJoinLoading(false);
     }
@@ -220,254 +197,226 @@ export default function LobbyScreen() {
 
   const handleRevealComplete = () => {
     if (pendingGameId) {
-      if (revealContext === 'create') {
-        // Host goes to configure screen to set up task packs
-        router.push(`/game/configure?id=${pendingGameId}`);
-      } else {
-        // Players go directly to the game
-        router.push(`/game/${pendingGameId}`);
-      }
+      router.push(`/game/${pendingGameId}`);
     }
   };
 
   const handleWatch = () => {
     const code = operationCode.toUpperCase().trim();
     if (code.length !== 4) {
-      showAlert({
-        title: 'Invalid Code',
-        message: 'Operation Code must be 4 characters',
-      });
+      setInlineError(strings.LOBBY_CODE_REQUIRED);
       return;
     }
     router.push(`/game/${code}`);
   };
 
   const handleBack = () => {
-    setMode(null);
+    setInlineError(null);
+    if (urlMode) {
+      router.replace('/');
+    } else {
+      setMode(null);
+    }
   };
 
-  // Render the initial choice screen content
-  const renderChoiceContent = () => (
-    <View style={styles.contentArea}>
-      <View style={styles.choiceButtons}>
-        <Button 
-title={strings.LOBBY_JOIN_OPERATION}
-          onPress={() => setMode('join-code')}
-          style={styles.choiceButton}
-        />
-        <Button 
-          title={strings.LOBBY_START_OPERATION}
-          onPress={() => setMode('start')}
-          style={styles.choiceButton}
-        />
-      </View>
+  const renderAvatarPicker = () => (
+    <Row gap={6} style={styles.avatarRow}>
+      {AVATARS.map((avatar) => (
+        <Pressable key={avatar.id} onPress={() => setAvatarId(avatar.id)}>
+          <Avatar avatarId={avatar.id} size={44} selected={avatarId === avatar.id} />
+        </Pressable>
+      ))}
+    </Row>
+  );
+
+  const renderScreenLayout = (body: React.ReactNode, footer: React.ReactNode) => (
+    <View style={[styles.page, contentStyle, { minHeight: contentMinHeight }]}>
+      <ScrollView
+        style={styles.formScroll}
+        contentContainerStyle={styles.formScrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {body}
+      </ScrollView>
+      <View style={[styles.footer, { paddingBottom: contentMinHeight * 0.1 }]}>{footer}</View>
     </View>
   );
 
-  // Render the operation code entry screen content (step 1 of join)
-  const renderJoinCodeContent = () => (
-    <View style={styles.contentArea}>
-      <Text style={styles.formTitle}>{strings.LOBBY_ENTER_CODE_TITLE}</Text>
-      <Text style={styles.formSubtitle}>{strings.LOBBY_ENTER_CODE_SUBTITLE}</Text>
-      
-      <View style={styles.formFields}>
+  const renderIdentityForm = () => (
+    <Stack gap={16}>
+      <View>
+        <Text variant="bodySmall" muted style={styles.fieldLabel}>
+          {strings.LOBBY_YOUR_NAME_LABEL}
+        </Text>
+        <Input
+          value={callsign}
+          onChangeText={(text) => {
+            setCallsign(text);
+            setInlineError(null);
+          }}
+          maxLength={24}
+          autoCapitalize="words"
+          autoFocus
+        />
+      </View>
+      <View>
+        <Text variant="bodySmall" muted style={styles.fieldLabel}>
+          {strings.LOBBY_ICON_LABEL}
+        </Text>
+        {renderAvatarPicker()}
+      </View>
+    </Stack>
+  );
+
+  const renderBackLink = (label: string, onPress: () => void) => (
+    <Pressable onPress={onPress} style={styles.backLink}>
+      <Text variant="metaMicro" muted>
+        {label}
+      </Text>
+    </Pressable>
+  );
+
+  const renderInlineError = () =>
+    inlineError ? <Banner message={inlineError} variant="error" onDismiss={() => setInlineError(null)} /> : null;
+
+  const renderJoinCodeContent = () =>
+    renderScreenLayout(
+      <Stack gap={16}>
+        <Text variant="display">{strings.LOBBY_ENTER_CODE_TITLE}</Text>
+
         <Input
           label={strings.LOBBY_OPERATION_CODE_LABEL}
           value={operationCode}
-          onChangeText={(text) => setOperationCode(text.toUpperCase())}
+          onChangeText={(text) => {
+            setOperationCode(text.toUpperCase());
+            setInlineError(null);
+          }}
           placeholder={strings.LOBBY_OPERATION_CODE_PLACEHOLDER}
           maxLength={4}
           autoCapitalize="characters"
-          style={{ marginBottom: theme.spacing.xl }}
         />
-      </View>
 
-      <View style={styles.actionButtons}>
-        <Button 
-          title={strings.LOBBY_CONTINUE} 
+        {renderInlineError()}
+      </Stack>,
+      <Stack gap={5} style={styles.actions}>
+        <Button
+          title={strings.LOBBY_CONTINUE}
           onPress={() => {
             if (operationCode.length !== 4) {
-              showAlert({
-                title: strings.ALERT_INVALID_CODE_TITLE,
-                message: strings.ALERT_INVALID_CODE_MESSAGE,
-              });
+              setInlineError(strings.LOBBY_CODE_REQUIRED);
               return;
             }
+            setInlineError(null);
             setMode('join');
           }}
+          fullWidth
         />
-        {operationCode.trim().length === 4 && (
-          <Button 
-            title={strings.LOBBY_WATCH_SPECTATOR} 
-            onPress={handleWatch}
-            style={{ marginTop: theme.spacing.md, borderColor: theme.colors.secondary, backgroundColor: 'transparent' }}
-          />
-        )}
-      </View>
+        {operationCode.trim().length === 4 ? (
+          <Pressable onPress={handleWatch} style={styles.secondaryLink}>
+            <Text variant="metaMicro" muted>
+              {strings.LOBBY_WATCH_SPECTATOR}
+            </Text>
+          </Pressable>
+        ) : null}
+        {renderBackLink(strings.LOBBY_BACK, handleBack)}
+      </Stack>,
+    );
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backText}>{strings.LOBBY_BACK}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderJoinContent = () =>
+    renderScreenLayout(
+      <Stack gap={16}>
+        <Text variant="display" style={styles.screenTitle}>
+          {strings.LOBBY_CHOOSE_COVER}
+        </Text>
 
-  // Render the identity form (shared between join and start)
-  const renderIdentityForm = () => (
-    <View style={styles.identitySection}>
-      <View style={styles.avatarContainer}>
-        <AvatarSelector 
-          selectedAvatarId={avatarId}
-          onSelect={setAvatarId}
-        />
-      </View>
-      <Input
-        label={strings.LOBBY_CALLSIGN_LABEL}
-        value={callsign}
-        onChangeText={setCallsign}
-        placeholder={strings.LOBBY_CALLSIGN_PLACEHOLDER}
-        maxLength={16}
-        autoCapitalize="none"
-      />
-    </View>
-  );
-
-  // Render the join identity form content (step 2 of join, or directly if URL prefilled)
-  const renderJoinContent = () => (
-    <View style={styles.contentArea}>
-      <Text style={styles.formTitle}>{strings.LOBBY_AGENT_DETAILS_TITLE}</Text>
-      <Text style={styles.formSubtitle}>{strings.LOBBY_AGENT_DETAILS_SUBTITLE}</Text>
-
-      <View style={styles.formFields}>
         {renderIdentityForm()}
-      </View>
+        {renderInlineError()}
+      </Stack>,
+      <Stack gap={5} style={styles.actions}>
+        <Button title={strings.LOBBY_JOIN_OPERATION} onPress={handleJoin} loading={joinLoading} fullWidth />
+        {renderBackLink(strings.LOBBY_BACK, () => {
+          setInlineError(null);
+          setMode(urlCode ? null : 'join-code');
+        })}
+      </Stack>,
+    );
 
-      <View style={styles.actionButtons}>
-        <Button 
-          title={strings.LOBBY_JOIN_OPERATION} 
-          onPress={handleJoin} 
-          loading={joinLoading}
-        />
-      </View>
+  const renderRecoveryContent = () =>
+    renderScreenLayout(
+      <Stack gap={16}>
+        <Text variant="display">{strings.LOBBY_IDENTITY_CONFLICT_TITLE}</Text>
+        <Text variant="bodySmall" muted>
+          {dynamicStrings.identityConflictSubtitle(callsign)}
+        </Text>
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => setMode(urlCode ? null : 'join-code')} style={styles.backButton}>
-          <Text style={styles.backText}>{strings.LOBBY_BACK}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Render recovery form when callsign is already taken
-  const renderRecoveryContent = () => (
-    <View style={styles.contentArea}>
-      <Text style={styles.formTitle}>{strings.LOBBY_IDENTITY_CONFLICT_TITLE}</Text>
-      <Text style={styles.formSubtitle}>{dynamicStrings.identityConflictSubtitle(callsign)}</Text>
-
-      <View style={styles.formFields}>
         <Input
           label={strings.LOBBY_AGENT_KEY_LABEL}
           value={recoveryKey}
-          onChangeText={(text) => setRecoveryKey(text.replace(/[^0-9]/g, ''))}
+          onChangeText={(text) => {
+            setRecoveryKey(text.replace(/[^0-9]/g, ''));
+            setInlineError(null);
+          }}
           placeholder={strings.LOBBY_AGENT_KEY_PLACEHOLDER}
           maxLength={3}
           keyboardType="number-pad"
-          style={{ marginBottom: theme.spacing.lg }}
         />
-      </View>
 
-      <View style={styles.actionButtons}>
-        <Button 
-          title={strings.LOBBY_VERIFY_IDENTITY} 
-          onPress={handleRecoverJoin} 
-          loading={joinLoading}
-        />
-      </View>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => setMode('join')} style={styles.backButton}>
-          <Text style={styles.backText}>{strings.LOBBY_USE_DIFFERENT_CALLSIGN}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Render the start (create) form content
-  const renderStartContent = () => (
-    <View style={styles.contentArea}>
-      <Text style={styles.formTitle}>{strings.LOBBY_AGENT_DETAILS_TITLE}</Text>
-      <Text style={styles.formSubtitle}>{strings.LOBBY_AGENT_DETAILS_SUBTITLE}</Text>
-
-      <View style={styles.formFields}>
-        {renderIdentityForm()}
-      </View>
-
-      <View style={styles.actionButtons}>
-        <Button 
-          title={strings.LOBBY_START_OPERATION} 
-          onPress={handleCreate} 
-          loading={createLoading}
-        />
-      </View>
-
-      <View style={styles.bottomNav}>
-<TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backText}>{strings.LOBBY_BACK}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        {renderInlineError()}
+      </Stack>,
+      <Stack gap={5} style={styles.actions}>
+        <Button title={strings.LOBBY_VERIFY_IDENTITY} onPress={handleRecoverJoin} loading={joinLoading} fullWidth />
+        {renderBackLink(strings.LOBBY_USE_DIFFERENT_NAME, () => {
+          setInlineError(null);
+          setMode('join');
+        })}
+      </Stack>,
     );
 
-  // Show reveal screen as full takeover
+  const renderStartContent = () =>
+    renderScreenLayout(
+      <Stack gap={16}>
+        <Text variant="display" style={styles.screenTitle}>
+          {strings.LOBBY_CHOOSE_COVER}
+        </Text>
+
+        {renderIdentityForm()}
+        {renderInlineError()}
+      </Stack>,
+      <Stack gap={5} style={styles.actions}>
+        <Button title={strings.LOBBY_CONTINUE} onPress={handleCreate} loading={createLoading} fullWidth />
+        {renderBackLink(strings.LOBBY_BACK, handleBack)}
+      </Stack>,
+    );
+
   if (mode === 'reveal') {
     return (
-      <SafeAreaView style={styles.container}>
-        <AgentKeyReveal 
-          agentKey={agentKey}
-          isNewKey={isNewKey}
-          onComplete={handleRevealComplete} 
-        />
-        <StatusBar style="light" />
-      </SafeAreaView>
+      <>
+        <AgentKeyReveal agentKey={agentKey} onComplete={handleRevealComplete} />
+        <StatusBar style="dark" />
+      </>
     );
+  }
+
+  if (!mode) {
+    return null;
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Fixed Header */}
-        <View style={styles.fixedHeader}>
-          <Text style={styles.title}>{strings.APP_NAME}</Text>
-        </View>
-
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {mode === null && renderChoiceContent()}
+        <View style={styles.screen}>
           {mode === 'join-code' && renderJoinCodeContent()}
           {mode === 'join' && renderJoinContent()}
           {mode === 'join-recover' && renderRecoveryContent()}
           {mode === 'start' && renderStartContent()}
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
-      {/* Manila Folder Help Tab */}
-      <TouchableOpacity 
-        onPress={() => setShowBriefing(true)}
-        style={styles.helpTab}
-        activeOpacity={0.9}
-      >
-        <Text style={styles.helpTabText}>{strings.LOBBY_BRIEFING_TAB}</Text>
-      </TouchableOpacity>
-
-      <StatusBar style="light" />
-      {AlertComponent}
-      <BriefingModal visible={showBriefing} onClose={() => setShowBriefing(false)} />
+      <StatusBar style="dark" />
     </SafeAreaView>
   );
 }
@@ -475,121 +424,49 @@ title={strings.LOBBY_JOIN_OPERATION}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
   },
-  
-  // Fixed header that stays in place
-  fixedHeader: {
-    alignItems: 'center',
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
+  screen: {
+    flex: 1,
+    paddingHorizontal: space[10],
   },
-  title: {
-    fontSize: theme.typography.fontSize.xxl,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    fontFamily: theme.typography.fontFamily.serif,
-    textAlign: 'center',
+  page: {
+    flex: 1,
+    width: '100%',
   },
-  
-  scrollContent: {
+  formScroll: {
+    flex: 1,
+  },
+  formScrollContent: {
     flexGrow: 1,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: 100,
+    paddingTop: space[20],
+    paddingBottom: space[10],
   },
-  
-  // Content area that changes between modes
-  contentArea: {
-    paddingTop: theme.spacing.lg,
+  footer: {
+    paddingTop: space[8],
   },
-  
-  // Choice screen styles
-  choiceButtons: {
-    width: '100%',
-    gap: theme.spacing.lg,
-    paddingTop: theme.spacing.xxl,
+  screenTitle: {
+    marginBottom: space[4],
   },
-  choiceButton: {
-    marginBottom: 0,
-  },
-  
-  // Form styles
-  formTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    letterSpacing: theme.typography.letterSpacing.wide,
-    fontFamily: theme.typography.fontFamily.serif,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  formSubtitle: {
-    color: theme.colors.surfaceMuted,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.mono,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  formFields: {
-    marginBottom: theme.spacing.xl,
-  },
-  identitySection: {
+  actions: {
     width: '100%',
   },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+  fieldLabel: {
+    marginBottom: space[4],
   },
-  actionButtons: {
-    width: '100%',
+  avatarRow: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
-  
-  // Bottom navigation
-  bottomNav: {
-    paddingTop: theme.spacing.xxl,
-    paddingBottom: theme.spacing.lg,
-    alignItems: 'flex-start',
+  backLink: {
+    alignSelf: 'center',
+    paddingTop: space[6],
   },
-  backButton: {
-    padding: theme.spacing.md,
-  },
-  backText: {
-    color: theme.colors.surfaceMuted,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.mono,
-    letterSpacing: theme.typography.letterSpacing.normal,
-  },
-  
-  // Manila Folder Help Tab
-  helpTab: {
-    position: 'absolute',
-    bottom: 0,
-    right: 24,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: theme.colors.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  helpTabText: {
-    color: theme.colors.primary,
-    fontSize: 11,
-    fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+  secondaryLink: {
+    alignSelf: 'center',
+    paddingVertical: space[2],
   },
 });

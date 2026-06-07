@@ -16,12 +16,12 @@ export const IconBinoculars: React.FC<IconBinocularsProps> = ({
         {/* Mask for left lens cutout */}
         <Mask id="leftLensMask">
           <Ellipse cx="18" cy="34" rx="12" ry="14" fill="white" />
-          <Circle cx="18" cy="38" r="5" fill="black" />
+          <Circle cx="18" cy="34" r="5" fill="black" />
         </Mask>
         {/* Mask for right lens cutout */}
         <Mask id="rightLensMask">
           <Ellipse cx="46" cy="34" rx="12" ry="14" fill="white" />
-          <Circle cx="46" cy="38" r="5" fill="black" />
+          <Circle cx="46" cy="34" r="5" fill="black" />
         </Mask>
       </Defs>
       
@@ -64,7 +64,7 @@ export const IconBinoculars: React.FC<IconBinocularsProps> = ({
       {/* Lens ring outlines */}
       <Circle
         cx="18"
-        cy="38"
+        cy="34"
         r="5"
         fill="none"
         stroke={color}
@@ -73,7 +73,7 @@ export const IconBinoculars: React.FC<IconBinocularsProps> = ({
       />
       <Circle
         cx="46"
-        cy="38"
+        cy="34"
         r="5"
         fill="none"
         stroke={color}

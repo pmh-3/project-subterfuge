@@ -1,23 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../services/firebase';
-import { Game, Player } from '../../types';
-import { useGameErrors } from '../../strings';
+import { db } from '@/services/firebase';
+import { Game, Player } from '@/types';
+import { parseGame, parsePlayer } from '@/types/firestoreParse';
+import { useGameErrors } from '@/strings';
 
 export const useGame = (gameId: string) => {
   const [game, setGame] = useState<Game | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Track if both game and players have loaded at least once
+  const [retryKey, setRetryKey] = useState(0);
+
   const gameLoaded = useRef(false);
   const playersLoaded = useRef(false);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setGame(null);
+    setLoading(true);
+    gameLoaded.current = false;
+    playersLoaded.current = false;
+    setRetryKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
 
     setLoading(true);
+    setError(null);
     gameLoaded.current = false;
     playersLoaded.current = false;
 
@@ -27,40 +38,57 @@ export const useGame = (gameId: string) => {
       }
     };
 
-    // Subscribe to Game Document
     const gameRef = doc(db, 'games', gameId);
-    const unsubGame = onSnapshot(gameRef, (doc) => {
-      if (doc.exists()) {
-        setGame(doc.data() as Game);
+    const unsubGame = onSnapshot(
+      gameRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const parsed = parseGame(snapshot.data());
+          setGame(parsed);
+          if (!parsed) {
+            setError(useGameErrors.CONNECTION_FAILED);
+          }
+        } else {
+          setGame(null);
+          setError(useGameErrors.OPERATION_NOT_FOUND);
+        }
         gameLoaded.current = true;
         checkLoading();
-      } else {
-        setError(useGameErrors.OPERATION_NOT_FOUND);
-      }
-    }, (err) => {
-      if (__DEV__) console.error(err);
-      setError(useGameErrors.CONNECTION_FAILED);
-    });
+      },
+      (err) => {
+        if (__DEV__) console.error(err);
+        setError(useGameErrors.CONNECTION_FAILED);
+        gameLoaded.current = true;
+        setLoading(false);
+      },
+    );
 
-    // Subscribe to Players Collection
     const playersRef = collection(db, 'games', gameId, 'players');
-    const unsubPlayers = onSnapshot(playersRef, (snapshot) => {
-      const playersList: Player[] = [];
-      snapshot.forEach((doc) => {
-        playersList.push(doc.data() as Player);
-      });
-      setPlayers(playersList);
-      playersLoaded.current = true;
-      checkLoading();
-    }, (err) => {
-      if (__DEV__) console.error(err);
-    });
+    const unsubPlayers = onSnapshot(
+      playersRef,
+      (snapshot) => {
+        const playersList: Player[] = [];
+        snapshot.forEach((playerDoc) => {
+          const parsed = parsePlayer(playerDoc.data());
+          if (parsed) playersList.push(parsed);
+        });
+        setPlayers(playersList);
+        playersLoaded.current = true;
+        checkLoading();
+      },
+      (err) => {
+        if (__DEV__) console.error(err);
+        setError(useGameErrors.CONNECTION_FAILED);
+        playersLoaded.current = true;
+        setLoading(false);
+      },
+    );
 
     return () => {
       unsubGame();
       unsubPlayers();
     };
-  }, [gameId]);
+  }, [gameId, retryKey]);
 
-  return { game, players, loading, error };
+  return { game, players, loading, error, retry };
 };

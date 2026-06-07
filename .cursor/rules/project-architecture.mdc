@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Project Subterfuge Architecture
 
+**Agent entry point:** [`AGENTS.md`](../../AGENTS.md) at repo root.
+
 ## What This Is
 A social deduction party game (React Native + Expo + Firebase). Players receive secret targets and missions; eliminate your target without getting caught. Web-first, mobile-compatible.
 
@@ -12,7 +14,7 @@ A social deduction party game (React Native + Expo + Firebase). Players receive 
 - **Frontend:** React Native 0.81 / Expo 54 / Expo Router 6 (file-based routing)
 - **Backend:** Firebase Firestore (real-time via `onSnapshot`), Firebase Anonymous Auth
 - **Language:** TypeScript 5.9 (strict)
-- **UI:** CSS-in-JS via `StyleSheet.create`, custom `theme.ts` tokens, "Cold War Bureau" aesthetic
+- **UI:** CSS-in-JS via `StyleSheet.create`, `@/design-system` tokens/primitives, Midnight Wire aesthetic
 
 ## Folder Structure
 ```
@@ -27,7 +29,7 @@ client/
 ├── src/
 │   ├── components/               # Shared UI: Button, Input, Alert, AvatarSelector, ErrorBoundary
 │   ├── constants.ts              # App-wide constants (durations, URLs, defaults)
-│   ├── theme.ts                  # Design tokens (colors, spacing, typography)
+│   ├── design-system/            # Midnight Wire tokens + primitives
 │   ├── types/                    # TypeScript interfaces (Game, Player, TaskPack)
 │   ├── data/                     # Static data: avatars, fallback tasks, seed CSV
 │   ├── features/
@@ -52,11 +54,15 @@ client/
 - **Platform abstraction:** Never use `Alert.alert`, `SecureStore`, or `localStorage` directly. Use `useAlert()` and `storage.save/get/delete`.
 - **Feature-based grouping:** Colocate service, hook, components, and types per feature.
 - **Pure logic extraction:** `gameLogic.ts` contains testable pure functions; `gameService.ts` handles only Firestore I/O.
-- **Constants:** Magic numbers go in `src/constants.ts`; colors go in `theme.ts`.
+- **Constants:** Magic numbers go in `src/constants.ts`; colors go in `@/design-system/tokens`.
 
 ## Running
 ```bash
 cd client && npm install && npx expo start --web   # localhost:8081
-npm test                                            # Jest tests
-npm run lint                                        # ESLint
+npm run verify                                    # lint + typecheck + contrast + test
+npm test                                          # Jest (unit + component projects)
+npm run lint                                      # ESLint
 ```
+
+## Imports
+`@/` → `client/src/` (tsconfig, babel `module-resolver`, Jest `moduleNameMapper`). Use `@/features/...`, `@/design-system`, etc. — not `../../src/...`.

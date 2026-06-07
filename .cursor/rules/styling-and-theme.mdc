@@ -1,46 +1,36 @@
 ---
-description: Theme token usage, color conventions, and the Cold War Bureau aesthetic for UI components.
-globs: "**/*.tsx"
+description: Midnight Wire design system usage for screens and feature components.
+globs: "client/app/**,client/src/features/**"
 alwaysApply: false
 ---
 
-# Styling & Theme Conventions
+# Styling & Design System
 
-## Color Tokens
-Always use `theme.colors.*` from `src/theme.ts`. Never inline hex or rgba values.
+**Entry point:** [`AGENTS.md`](../../AGENTS.md) · **Source:** `docs/plans/DESIGN_SYSTEM.md` · **Import:** `@/design-system`
+
+## Tokens & primitives
 
 ```typescript
-// ❌ BAD
-backgroundColor: 'rgba(212, 201, 176, 0.05)'
-color: '#B58E3D'
+// ❌ BAD — inline colors in screens/features
+backgroundColor: '#F6F2E8'
 
 // ✅ GOOD
-backgroundColor: theme.colors.surfaceFaint
-color: theme.colors.primary
+import { colors, space, Text, Button, Stack } from '@/design-system';
+backgroundColor: colors.background
 ```
 
-If you need a new color, add it to `theme.ts` with a semantic name, then reference it.
-
-## Available Token Categories
-- `theme.colors` — palette: `background`, `surface`, `primary`, `text`, `secondary`, `error`, `border`, `overlay`, `paper`, `paperWarm`, `success`, plus semi-transparent variants (`surfaceFaint`, `surfaceTint`, `surfaceMuted`, `surfaceLight`, `primaryFaint`, `successFaint`, `errorFaint`, `holdOverlay`, `statsBackground`, `darkOverlay`, `alertBackground`)
-- `theme.spacing` — `xs(4)`, `sm(8)`, `md(16)`, `lg(24)`, `xl(32)`, `xxl(60)`
-- `theme.typography.fontFamily` — `serif` (Playfair, headers), `mono` (Special Elite, typewriter), `sans` (Inter, labels)
-- `theme.typography.fontSize` — `xs2(10)` through `jumbo(50)`
+- Use `colors`, `space`, `radius` tokens — not inline hex/rgba in `client/app/**` or `client/src/features/**`
+- Use `<Text variant="…" />` for typography — not raw `fontSize`/`fontFamily` for styled copy
+- Layout: `Stack`, `Row`, `Rule` for spacing and section breaks
+- `src/theme.ts` was deleted in Phase 2; do not recreate it
 
 ## Constants
-Animation durations and defaults live in `src/constants.ts`, not inline:
 
-```typescript
-// ❌ BAD
-duration: 1000
+Animation durations and defaults live in `src/constants.ts`, not inline.
 
-// ✅ GOOD
-import { HOLD_DURATION } from '../../src/constants';
-duration: HOLD_DURATION
-```
+## Design rules
 
-## Design Rules
-- **No emojis in UI** — use text, symbols, or SVG icons
-- **Cold War Bureau aesthetic** — manila folders, brass borders, typewriter fonts, rubber stamp effects
-- **StyleSheet.create** for all styles — no inline style objects except `{ flex: 1 }` on root containers
-- **Min font size:** 12px body, 20px+ for critical status/actions
+- **No shadows, no gradients** — see `design-system.mdc`
+- **Midnight Wire aesthetic** — light dossier, ruled lines, olive accent for active states only
+- **StyleSheet.create** for layout; push visual styling into primitives where possible
+- **No emojis in UI** — SVG avatars via `<Avatar />`

@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Firestore Patterns
 
+**Entry point:** [`AGENTS.md`](../../AGENTS.md) · **Validation:** `@/types/firestoreParse` (Zod) on all reads
+
 ## Collections
 - `games/{gameId}` → `Game` interface
 - `games/{gameId}/players/{uid}` → `Player` interface

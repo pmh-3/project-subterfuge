@@ -1,19 +1,45 @@
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider } from '../src/features/auth/AuthContext';
-import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { theme } from '../src/theme';
-import { strings } from '../src/strings';
+import { AuthProvider } from '@/features/auth/AuthContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { colors } from '@/design-system';
+import { strings } from '@/strings';
 import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { SpecialElite_400Regular } from '@expo-google-fonts/special-elite';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter';
+import {
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+} from '@expo-google-fonts/cormorant-garamond';
+import {
+  Outfit_300Light,
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+} from '@expo-google-fonts/outfit';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+} from '@expo-google-fonts/jetbrains-mono';
 import { ActivityIndicator, View, Platform } from 'react-native';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
+    // Legacy — removed in Phase 2 screen migration
     PlayfairDisplay_700Bold,
-    SpecialElite_400Regular,
     Inter_600SemiBold,
+    // Midnight Wire design system
+    CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
+    Outfit_300Light,
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    SpecialElite_400Regular,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
   });
 
   // On web, fonts are loaded via CSS in index.html - don't block rendering
@@ -22,8 +48,8 @@ export default function RootLayout() {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={theme.colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color={colors.inkPrimary} />
       </View>
     );
   }
@@ -35,7 +61,7 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background },
+              contentStyle: { backgroundColor: colors.background },
             }}
           />
         </AuthProvider>
@@ -48,8 +74,9 @@ export default function RootLayout() {
 if (Platform.OS === 'web') {
   const style = document.createElement('style');
   style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&family=Special+Elite&display=swap');
     html, body, #root {
-      background-color: ${theme.colors.background};
+      background-color: ${colors.background};
       overscroll-behavior: none;
     }
   `;

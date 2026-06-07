@@ -1,4 +1,13 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "players",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "killCount", "order": "DESCENDING" },
+        { "fieldPath": "callsign", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

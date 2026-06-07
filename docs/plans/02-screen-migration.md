@@ -66,3 +66,48 @@ For each migrated screen: load on web (`npm run web`) AND iOS sim (`npm run ios`
 
 - The status-bar visual in the reference (`10:35  ▲▲ ⬡` faux chrome) is mockup-only. Confirm we don't try to render it in-app.
 - After deleting `theme.ts`, do we leave a one-liner comment-only file pointing to `@/design-system` to prevent re-creation, or just remove it?
+
+## Handoff note
+
+**Completed:** 2026-06-07
+
+### What shipped (all 11 items)
+
+| # | Screen | File | Status |
+|---|---|---|---|
+| 01 | Home | `client/app/index.tsx` | Hero bottom-aligned, Join/Start buttons, briefing Sheet link |
+| 02 | Lobby | `client/app/game/lobby.tsx` | Sub-flows migrated; avatar row picker; manila briefing tab removed |
+| 03 | Identity Verified | `AgentKeyReveal.tsx` | `codeHero` key display, design-system layout |
+| 04 | Mission Control | `client/app/game/configure.tsx` | Theme/Mode/Difficulty/Rerolls; Infinite ∞ disabled |
+| 05 | Game shell + tabs | `client/app/game/[id].tsx` | `NavBar` bottom tabs: Contract / Situation / Admin / Briefing |
+| 06 | Contract | `ContractView.tsx` | Folder-tab `Card`, dashed reroll row, `HoldToConfirm` |
+| 07 | Situation Room | `CommandCenterView.tsx` | `ScreenHeader` + `AgentRow` with you-accent border |
+| 08 | Host Override | `HostSettingsView.tsx` | Mid-game controls only; `AgentRow` + eliminate buttons |
+| 09 | Mission Briefing | `BriefingView.tsx` (new) | Numbered rules list; tab destination; modal removed |
+| 10 | Victory | `VictoryOverlay.tsx` | Design-system `Sheet` + typography |
+| 11 | Alerts / Error boundary | `useAlert.tsx`, `ErrorBoundary.tsx` | Wrap design-system `Alert` / `Button` |
+
+### Deleted
+
+- `client/src/theme.ts` (zero importers)
+- `client/src/components/Button.tsx`, `Input.tsx`, `AvatarSelector.tsx`, `AgentKeyBadge.tsx`, `Alert.tsx`
+- `BriefingModal.tsx`, `PackSelector.tsx`, `IdentityHeader.tsx` (logic absorbed into configure / ContractView / BriefingView)
+
+### Design-system extensions
+
+- `SegmentChips`: `disabled` option (Infinite mode)
+- `HoldToConfirm`: `disabled` / `loading` props
+
+### Decisions made
+
+- **Status-bar chrome:** not rendered (mockup-only, per open question).
+- **`theme.ts`:** deleted outright; `.cursor/rules/styling-and-theme.mdc` points to `@/design-system`.
+- **Home flow:** index is the entry screen; lobby requires `?mode=` param (redirects to `/` if missing).
+- **Briefing:** reachable from Home via Sheet link and from in-game Briefing tab.
+
+### Verification
+
+- `npm run verify` green (30 tests, 0 lint errors)
+- No inline hex/rgba in `client/app/**` or `client/src/features/**`
+- Web gallery: not re-screenshot in this session — spot-check `/_dev/gallery` + each screen at `localhost:8081`
+- iOS sim: not verified in this environment — **web verified, iOS pending**

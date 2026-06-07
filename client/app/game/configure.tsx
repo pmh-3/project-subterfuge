@@ -1,27 +1,114 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../src/services/firebase';
-import { Button } from '../../src/components/Button';
-import { PackSelector } from '../../src/features/game/components/PackSelector';
-import { fetchTaskPacks } from '../../src/features/tasks/taskService';
-import { TaskPack, DifficultySetting } from '../../src/types/taskPack';
-import { theme } from '../../src/theme';
-import { useAlert } from '../../src/hooks/useAlert';
-import { strings, dynamicStrings } from '../../src/strings';
+import { doc, updateDoc, getDoc, deleteField } from 'firebase/firestore';
+import { db } from '@/services/firebase';
+import {
+  Text,
+  Button,
+  Input,
+  Stack,
+  ScreenHeader,
+  SegmentChips,
+  PillSegments,
+  Rule,
+  Row,
+  colors,
+  space,
+  radius,
+} from '@/design-system';
+import {
+  DEFAULT_INFINITE_KILL_GOAL,
+  INFINITE_KILL_GOAL_OPTIONS,
+  INFINITE_KILL_GOAL_MIN,
+  INFINITE_KILL_GOAL_MAX,
+} from '@/constants';
+import { parseGameOrThrow } from '@/types/firestoreParse';
+import { fetchTaskPacks } from '@/features/tasks/taskService';
+import { TaskPack, DifficultySetting } from '@/types/taskPack';
+import { useAlert } from '@/hooks/useAlert';
+import { useLayout } from '@/hooks/useLayout';
+import { strings, dynamicStrings } from '@/strings';
 
 const DIFFICULTY_OPTIONS: DifficultySetting[] = ['Mixed', 'Easy', 'Medium', 'Hard'];
+
+function TaskPackCard({
+  pack,
+  selected,
+  expanded,
+  onToggleSelect,
+  onToggleExamples,
+}: {
+  pack: TaskPack;
+  selected: boolean;
+  expanded: boolean;
+  onToggleSelect: () => void;
+  onToggleExamples: () => void;
+}) {
+  const hasExamples = pack.tasks.length > 0;
+
+  return (
+    <View style={[styles.packCard, selected && styles.packCardSelected]}>
+      <Pressable onPress={onToggleSelect} style={styles.packMain}>
+        <Row justify="space-between" align="flex-start" gap={4}>
+          <Text variant="body" style={styles.packName}>
+            {pack.displayName}
+          </Text>
+          {selected ? (
+            <Text variant="body" accent>
+              ✓
+            </Text>
+          ) : null}
+        </Row>
+        {pack.description ? (
+          <Text variant="bodySmall" muted style={styles.packDescription}>
+            {pack.description}
+          </Text>
+        ) : null}
+      </Pressable>
+
+      {hasExamples ? (
+        <>
+          <Rule marginVertical={4} style={styles.packDivider} />
+          <Pressable onPress={onToggleExamples} style={styles.examplesToggle}>
+            <Row justify="space-between" align="center">
+              <Text variant="bodySmall" color={expanded ? colors.accentText : colors.inkSecondary}>
+                {expanded ? strings.PACK_HIDE_EXAMPLES : strings.PACK_SHOW_EXAMPLES}
+              </Text>
+              <Text variant="bodySmall" muted>
+                {expanded ? '▴' : '▾'}
+              </Text>
+            </Row>
+          </Pressable>
+          {expanded ? (
+            <View style={styles.examplesList}>
+              {pack.tasks.slice(0, 3).map((task) => (
+                <Text key={task.id} variant="bodySmall" style={styles.exampleTask}>
+                  {task.text}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
+    </View>
+  );
+}
 
 export default function ConfigureScreen() {
   const router = useRouter();
   const { id: gameId } = useLocalSearchParams<{ id: string }>();
   const { showAlert, AlertComponent } = useAlert();
-  
+  const { contentStyle } = useLayout();
+
   const [packs, setPacks] = useState<TaskPack[]>([]);
   const [selectedPackIds, setSelectedPackIds] = useState<string[]>(['basic_training']);
+  const [expandedPackId, setExpandedPackId] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState('elimination');
+  const [killGoal, setKillGoal] = useState(DEFAULT_INFINITE_KILL_GOAL);
+  const [customKillGoal, setCustomKillGoal] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultySetting>('Mixed');
   const [maxRerolls, setMaxRerolls] = useState<number>(5);
   const [loading, setLoading] = useState(true);
@@ -33,12 +120,33 @@ export default function ConfigureScreen() {
 
   const loadPacks = async () => {
     try {
-      // Fetch all available packs from Firestore
-      const availablePacks = await fetchTaskPacks();
+      const [availablePacks, gameSnap] = await Promise.all([
+        fetchTaskPacks(),
+        getDoc(doc(db, 'games', gameId!)),
+      ]);
+
       setPacks(availablePacks);
-      
-      // Default to basic_training if available
-      if (availablePacks.some(p => p.id === 'basic_training')) {
+
+      if (gameSnap.exists()) {
+        const game = parseGameOrThrow(gameSnap.data());
+        if (game.selectedPacks?.length) {
+          setSelectedPackIds(game.selectedPacks);
+        } else if (availablePacks.some((p) => p.id === 'basic_training')) {
+          setSelectedPackIds(['basic_training']);
+        } else if (availablePacks.length > 0) {
+          setSelectedPackIds([availablePacks[0].id]);
+        }
+        if (game.difficultySetting) setDifficulty(game.difficultySetting);
+        if (game.maxRerolls != null) setMaxRerolls(game.maxRerolls);
+        if (game.mode === 'INFINITE') {
+          setGameMode('infinite');
+          const goal = game.infiniteConfig?.endCondition.value ?? DEFAULT_INFINITE_KILL_GOAL;
+          setKillGoal(goal);
+          if (!INFINITE_KILL_GOAL_OPTIONS.includes(goal as (typeof INFINITE_KILL_GOAL_OPTIONS)[number])) {
+            setCustomKillGoal(String(goal));
+          }
+        }
+      } else if (availablePacks.some((p) => p.id === 'basic_training')) {
         setSelectedPackIds(['basic_training']);
       } else if (availablePacks.length > 0) {
         setSelectedPackIds([availablePacks[0].id]);
@@ -54,6 +162,20 @@ export default function ConfigureScreen() {
     }
   };
 
+  const togglePack = (packId: string) => {
+    if (selectedPackIds.includes(packId)) {
+      if (selectedPackIds.length > 1) {
+        setSelectedPackIds(selectedPackIds.filter((id) => id !== packId));
+      }
+    } else {
+      setSelectedPackIds([...selectedPackIds, packId]);
+    }
+  };
+
+  const toggleExamples = (packId: string) => {
+    setExpandedPackId((current) => (current === packId ? null : packId));
+  };
+
   const handleAuthorize = async () => {
     if (selectedPackIds.length === 0) {
       showAlert({
@@ -63,18 +185,31 @@ export default function ConfigureScreen() {
       return;
     }
 
+    const resolvedKillGoal = customKillGoal
+      ? Math.min(
+          INFINITE_KILL_GOAL_MAX,
+          Math.max(INFINITE_KILL_GOAL_MIN, parseInt(customKillGoal, 10) || killGoal),
+        )
+      : killGoal;
+
     setSaving(true);
     try {
-      // Save configuration to game document
       const gameRef = doc(db, 'games', gameId!);
       await updateDoc(gameRef, {
         selectedPacks: selectedPackIds,
         difficultySetting: difficulty,
-        maxRerolls: maxRerolls,
-        status: 'LOBBY', // Move to LOBBY after configuration
+        maxRerolls,
+        status: 'LOBBY',
+        mode: gameMode === 'infinite' ? 'INFINITE' : 'CLASSIC',
+        ...(gameMode === 'infinite'
+          ? {
+              infiniteConfig: {
+                endCondition: { type: 'KILL_GOAL', value: resolvedKillGoal },
+              },
+            }
+          : { infiniteConfig: deleteField() }),
       });
-      
-      // Navigate to the game room
+
       router.replace(`/game/${gameId}`);
     } catch (error) {
       if (__DEV__) console.error('Failed to save configuration:', error);
@@ -87,103 +222,157 @@ export default function ConfigureScreen() {
     }
   };
 
-  const handleBack = () => {
-    router.replace('/game/lobby');
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{strings.CONFIGURE_LOADING}</Text>
+          <Text variant="bodySmall" muted>
+            {strings.CONFIGURE_LOADING}
+          </Text>
         </View>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{strings.CONFIGURE_HEADER_TITLE}</Text>
-          <Text style={styles.subtitle}>{dynamicStrings.operationSubtitle(gameId!)}</Text>
-        </View>
-
-        {/* Pack Selector */}
-        <PackSelector
-          packs={packs}
-          selectedPackIds={selectedPackIds}
-          onSelectionChange={setSelectedPackIds}
+      <ScrollView contentContainerStyle={[styles.scrollContent, contentStyle]}>
+        <ScreenHeader
+          eyebrow={dynamicStrings.operationSubtitle(gameId!)}
+          title={strings.CONFIGURE_HEADER_TITLE}
         />
 
-        {/* Difficulty Selector */}
-        <View style={styles.difficultySection}>
-          <Text style={styles.label}>{strings.CONFIGURE_DIFFICULTY_LABEL}</Text>
-          <View style={styles.difficultyToggle}>
-            {DIFFICULTY_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.difficultyOption,
-                  difficulty === option && styles.difficultyOptionActive,
-                ]}
-                onPress={() => setDifficulty(option)}
-              >
-                <Text style={[
-                  styles.difficultyText,
-                  difficulty === option && styles.difficultyTextActive,
-                ]}>
-                  {option.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <Stack gap={8}>
+          <View>
+            <Text variant="label" muted style={styles.sectionLabel}>
+              {strings.CONFIGURE_TASK_PACKS_LABEL}
+            </Text>
+            <Text variant="bodySmall" muted style={styles.sectionHint}>
+              {strings.CONFIGURE_TASK_PACKS_HINT}
+            </Text>
+            <Stack gap={3}>
+              {packs.map((pack) => (
+                <TaskPackCard
+                  key={pack.id}
+                  pack={pack}
+                  selected={selectedPackIds.includes(pack.id)}
+                  expanded={expandedPackId === pack.id}
+                  onToggleSelect={() => togglePack(pack.id)}
+                  onToggleExamples={() => toggleExamples(pack.id)}
+                />
+              ))}
+            </Stack>
           </View>
-        </View>
 
-        {/* Reroll Selector */}
-        <View style={styles.difficultySection}>
-          <Text style={styles.label}>{strings.CONFIGURE_REROLLS_LABEL}</Text>
-          <View style={styles.difficultyToggle}>
-            {[1, 3, 5, 10].map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.difficultyOption,
-                  maxRerolls === option && styles.difficultyOptionActive,
-                ]}
-                onPress={() => setMaxRerolls(option)}
-              >
-                <Text style={[
-                  styles.difficultyText,
-                  maxRerolls === option && styles.difficultyTextActive,
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View>
+            <Text variant="label" muted style={styles.sectionLabel}>
+              {strings.CONFIGURE_MODE_LABEL}
+            </Text>
+            <SegmentChips
+              value={gameMode}
+              onChange={setGameMode}
+              options={[
+                {
+                  value: 'elimination',
+                  label: strings.CONFIGURE_MODE_ELIMINATION,
+                  sublabel: strings.CONFIGURE_MODE_ELIMINATION_SUB,
+                },
+                {
+                  value: 'infinite',
+                  label: strings.CONFIGURE_MODE_INFINITE,
+                  sublabel: strings.CONFIGURE_MODE_INFINITE_SUB,
+                },
+              ]}
+            />
           </View>
-        </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actions}>
-          <Button
-            title={strings.CONFIGURE_AUTHORIZE_BUTTON}
-            onPress={handleAuthorize}
-            loading={saving}
-          />
-        </View>
+          {gameMode === 'infinite' ? (
+            <View>
+              <Text variant="label" muted style={styles.sectionLabel}>
+                {strings.CONFIGURE_MISSION_SUCCESS_LABEL}
+              </Text>
+              <Text variant="bodySmall" muted style={styles.sectionHint}>
+                {strings.CONFIGURE_MISSION_SUCCESS_HINT}
+              </Text>
+              <PillSegments
+                value={
+                  customKillGoal ||
+                  !INFINITE_KILL_GOAL_OPTIONS.includes(killGoal as (typeof INFINITE_KILL_GOAL_OPTIONS)[number])
+                    ? 'custom'
+                    : String(killGoal)
+                }
+                onChange={(v) => {
+                  if (v === 'custom') {
+                    setCustomKillGoal(String(killGoal));
+                    return;
+                  }
+                  setCustomKillGoal('');
+                  setKillGoal(Number(v));
+                }}
+                options={[
+                  ...INFINITE_KILL_GOAL_OPTIONS.map((n) => ({ value: String(n), label: String(n) })),
+                  { value: 'custom', label: 'Custom' },
+                ]}
+              />
+              {customKillGoal !== '' || !INFINITE_KILL_GOAL_OPTIONS.includes(killGoal as (typeof INFINITE_KILL_GOAL_OPTIONS)[number]) ? (
+                <Input
+                  value={customKillGoal || String(killGoal)}
+                  onChangeText={(text) => {
+                    setCustomKillGoal(text);
+                    const parsed = parseInt(text, 10);
+                    if (!Number.isNaN(parsed)) setKillGoal(parsed);
+                  }}
+                  keyboardType="number-pad"
+                  placeholder={`${INFINITE_KILL_GOAL_MIN}-${INFINITE_KILL_GOAL_MAX}`}
+                  style={styles.customGoalInput}
+                />
+              ) : null}
+            </View>
+          ) : null}
 
-        {/* Back Link */}
-        <View style={styles.bottomNav}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backText}>{strings.CONFIGURE_CANCEL_OPERATION}</Text>
-          </TouchableOpacity>
-        </View>
+          <View>
+            <Text variant="label" muted style={styles.sectionLabel}>
+              {strings.CONFIGURE_DIFFICULTY_LABEL}
+            </Text>
+            <Text variant="bodySmall" muted style={styles.sectionHint}>
+              {strings.CONFIGURE_DIFFICULTY_HINT}
+            </Text>
+            <PillSegments
+              value={difficulty}
+              onChange={(v) => setDifficulty(v as DifficultySetting)}
+              options={DIFFICULTY_OPTIONS.map((d) => ({
+                value: d,
+                label: d === 'Medium' ? 'Med' : d,
+              }))}
+            />
+          </View>
+
+          <View>
+            <Text variant="label" muted style={styles.sectionLabel}>
+              {strings.CONFIGURE_OBJECTIVE_SWAPS_LABEL}
+            </Text>
+            <Text variant="bodySmall" muted style={styles.sectionHint}>
+              {strings.CONFIGURE_OBJECTIVE_SWAPS_HINT}
+            </Text>
+            <PillSegments
+              value={String(maxRerolls)}
+              onChange={(v) => setMaxRerolls(Number(v))}
+              options={[1, 3, 5, 10].map((n) => ({ value: String(n), label: String(n) }))}
+            />
+          </View>
+
+          <Button title={strings.CONFIGURE_AUTHORIZE_BUTTON} onPress={handleAuthorize} loading={saving} fullWidth />
+
+          <Pressable onPress={() => router.replace(`/game/${gameId}`)} style={styles.backLink}>
+            <Text variant="bodySmall" muted>
+              {strings.CONFIGURE_BACK_TO_LOBBY}
+            </Text>
+          </Pressable>
+        </Stack>
       </ScrollView>
 
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       {AlertComponent}
     </SafeAreaView>
   );
@@ -192,91 +381,69 @@ export default function ConfigureScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: 100,
+    paddingHorizontal: space[9],
+    paddingTop: space[7],
+    paddingBottom: space[14],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.md,
-    fontFamily: theme.typography.fontFamily.mono,
-    letterSpacing: 2,
+  sectionLabel: {
+    marginBottom: space[2],
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-    paddingTop: theme.spacing.lg,
+  sectionHint: {
+    marginBottom: space[4],
+    lineHeight: 20,
   },
-  title: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.xxl,
-    fontFamily: theme.typography.fontFamily.serif,
-    fontWeight: 'bold',
-    letterSpacing: 4,
-    marginBottom: 8,
+  packCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
   },
-  subtitle: {
-    color: theme.colors.secondary,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.mono,
-    letterSpacing: 2,
+  packCardSelected: {
+    backgroundColor: colors.accentTint,
+    borderColor: colors.accent,
+    borderWidth: 2,
   },
-  label: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    marginBottom: theme.spacing.sm,
+  packMain: {
+    paddingVertical: space[6],
+    paddingHorizontal: space[6],
   },
-  difficultySection: {
-    marginBottom: theme.spacing.xl,
-  },
-  difficultyToggle: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surfaceFaint,
-    borderRadius: 4,
-    padding: 4,
-  },
-  difficultyOption: {
+  packName: {
     flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 2,
   },
-  difficultyOptionActive: {
-    backgroundColor: theme.colors.primary,
+  packDescription: {
+    marginTop: space[3],
+    lineHeight: 20,
   },
-  difficultyText: {
-    color: theme.colors.secondary,
-    fontSize: 12,
-    fontFamily: theme.typography.fontFamily.sans,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+  packDivider: {
+    marginVertical: 0,
   },
-  difficultyTextActive: {
-    color: theme.colors.background,
+  examplesToggle: {
+    paddingVertical: space[4],
+    paddingHorizontal: space[6],
   },
-  actions: {
-    marginBottom: theme.spacing.lg,
+  examplesList: {
+    paddingHorizontal: space[6],
+    paddingBottom: space[6],
+    gap: space[3],
   },
-  bottomNav: {
-    paddingTop: theme.spacing.lg,
-    alignItems: 'flex-start',
+  exampleTask: {
+    lineHeight: 20,
   },
-  backButton: {
-    padding: theme.spacing.md,
+  backLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: space[4],
   },
-  backText: {
-    color: theme.colors.surfaceMuted,
-    fontSize: 14,
-    fontFamily: theme.typography.fontFamily.mono,
+  customGoalInput: {
+    marginTop: space[4],
   },
 });

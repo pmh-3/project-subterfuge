@@ -36,13 +36,13 @@ Infrastructure and code quality improvements that make the codebase more maintai
 
 - [ ] **DEBT-1: Tighten Firestore security rules** — Current rules allow any authenticated user to update any game/player document. Host-only operations (`startGame`, `endGame`, `adminForceEliminate`) should be enforced server-side. **Approach:** Add `request.auth.uid == resource.data.hostId` checks for game updates, or migrate critical operations to Cloud Functions.
 
-- [ ] **DEBT-2: Path aliases** — All imports use long relative paths like `../../src/features/game/gameService`. Configure `@/` alias in `tsconfig.json` + `babel.config.js` so imports become `@/features/game/gameService`. Reduces agent import errors.
+- [x] **DEBT-2: Path aliases** — `@/` → `client/src/` codemodded across `app/` and `src/` (Phase 5, 2026-06-07).
 
-- [ ] **DEBT-3: Runtime validation on Firestore data** — Every Firestore read uses `as Game` / `as Player` type assertions with no runtime validation. If schema drifts (e.g., a field is missing), it fails silently. **Approach:** Add Zod schemas for `Game` and `Player`, validate on `onSnapshot` reads.
+- [x] **DEBT-3: Runtime validation on Firestore data** — Zod schemas in `client/src/types/schemas.ts`; `parseGame` / `parsePlayer` in `firestoreParse.ts` at `useGame` and `gameService` boundaries (Phase 5, 2026-06-07).
 
-- [ ] **DEBT-4: CI/CD pipeline** — No automated checks. A GitHub Actions workflow running `npm test`, `npm run lint`, and `tsc --noEmit` on PRs would catch regressions before merge.
+- [x] **DEBT-4: CI/CD pipeline** — `.github/workflows/ci.yml`: `npm run verify` + web export on PR/main (Phase 5, 2026-06-07).
 
-- [ ] **DEBT-5: React component tests** — Only pure logic is tested (27 tests). Key interaction flows (hold-to-confirm, elimination confirmation, lobby join) have no automated coverage. **Approach:** Add `@testing-library/react-native` and write smoke tests for critical screens.
+- [x] **DEBT-5: React component tests** — Jest dual-project config + 5 smoke tests in `src/__tests__/components/` (Phase 5, 2026-06-07). Extend coverage as screens change.
 
 - [ ] **DEBT-6: Callsign case normalization** — `joinGame` compares callsigns with `.toUpperCase()` but stores the original casing. "Agent X" and "AGENT X" are treated as the same identity but display differently. **Fix:** Normalize to consistent casing on storage, or store a separate `callsign_normalized` field.
 
@@ -52,33 +52,43 @@ Infrastructure and code quality improvements that make the codebase more maintai
 
 ## Feature Work
 
-Remaining items from the Phase 3 roadmap and new ideas surfaced during the refactor.
+Remaining items from the product roadmap and plans.
 
-- [ ] **FEAT-1: Notifications** — In-app banners when a player is eliminated. Web: Notification API + service worker. iOS: expo-notifications + APNs + Cloud Functions trigger. *(Phase 3, Priority 2)*
+- [ ] **FEAT-1: Notifications** — In-app banners when a player is eliminated. Web: Notification API + service worker. iOS: expo-notifications + APNs + Cloud Functions trigger.
 
-- [ ] **FEAT-2: Mugshot Upload** — Player photo as profile image via expo-image-picker + Firebase Storage. Display in ContractView and Command Center. *(Phase 3, Priority 3)*
+- [ ] **FEAT-2: Mugshot Upload** — Player photo as profile image via expo-image-picker + Firebase Storage.
 
-- [ ] **FEAT-3: Continuous / Multi-Contract Game Mode** — Major gameplay shift: respawn mode, multi-contract mode, or continuous loop. *(Phase 3, Priority 4)*
+- [ ] **FEAT-3: Infinite Game Mode** — Respawn / score-attack mode (`game.mode: 'INFINITE'`). Decision locked in `docs/adr/0004-continuous-game-mode-shape.md`; implementation plan in `docs/plans/04-continuous-game-mode.md`. Mission Control chip exists but disabled.
 
-- [ ] **FEAT-4: Cloud Functions migration** — Move game-critical operations (`startGame`, `confirmElimination`, `adminForceEliminate`) to Firebase Cloud Functions for server-side authority. Eliminates cheating vector and solves the host-auth problem. Pure logic is already extracted to `gameLogic.ts` to make this straightforward.
+- [ ] **FEAT-4: Cloud Functions migration** — Move game-critical operations to Firebase Cloud Functions for server-side authority. Pure logic already in `gameLogic.ts`.
 
 ---
 
-## Completed (This Refactor)
+## Completed (Refactor Phases 0–5)
 
-For reference, work completed during the code cleanup sprint:
+### Phase 0 — Housekeeping (2026-06-07)
+- [x] Baseline commit, `npm run verify`, font packages, SEC-1 filed
 
-- [x] Remove dead code (unused styles, exports, stale scripts, duplicate CSV)
-- [x] Extract magic numbers to `constants.ts`, inline colors to `theme.ts`
-- [x] Extract `useHoldToConfirm` hook and `getAvatarDisplay` utility
-- [x] Deduplicate gameService elimination logic (`computeEliminationUpdates`)
-- [x] Deduplicate task resolution logic (`resolveAvailableTasks` / `pickRandomTask`)
-- [x] Replace all `catch(e: any)` with proper `instanceof Error` narrowing
-- [x] Consolidate remaining inline rgba colors to theme tokens
-- [x] Archive stale docs, update TECHNICAL_ROADMAP schema, rewrite README
-- [x] Set up Jest + ts-jest, write 27 tests across 5 suites
-- [x] Install ESLint (expo config) + Prettier, add `lint` and `format` scripts
-- [x] Create `firestore.rules` and `firestore.indexes.json`
-- [x] Extract pure game logic to `gameLogic.ts` (shuffle, target chain, win detection, elimination computation)
-- [x] Add `ErrorBoundary` component, wrap root layout
-- [x] Create 7 Cursor rules for agent onboarding
+### Phase 1 — Design System (2026-06-07)
+- [x] Midnight Wire tokens + 19 primitives, `@/` alias, `design-system.mdc`, gallery route
+
+### Phase 2 — Screen Migration (2026-06-07)
+- [x] All 11 screens migrated; `theme.ts` deleted; legacy components removed
+
+### Phase 3 — UX Bug Fixes (2026-06-07)
+- [x] Contrast fix + `check-contrast` in verify; lobby flow compression; host-only Agent Key reveal; `midnightwire.app` domain; `useLayout()`; inline `Banner` errors
+
+### Phase 5 — Agent-Friendly Codebase (2026-06-07)
+- [x] `AGENTS.md` at repo root
+- [x] Cursor rules audited; `game-modes.mdc` added
+- [x] Path alias codemod complete
+- [x] Zod validation at Firestore read boundaries
+- [x] GitHub Actions CI
+- [x] Component test scaffolding (5 smoke tests)
+- [x] 5 ADRs in `docs/adr/`
+- [x] 4 in-repo skills in `.cursor/skills/`
+
+### Earlier cleanup sprint
+- [x] Remove dead code; extract constants; `useHoldToConfirm`; dedupe elimination/task logic
+- [x] Jest + 27 pure-logic tests; ESLint + Prettier; `firestore.rules`
+- [x] `gameLogic.ts` extraction; `ErrorBoundary`; 7 Cursor rules (now 9)

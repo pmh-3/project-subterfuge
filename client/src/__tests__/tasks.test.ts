@@ -1,4 +1,4 @@
-import { TASKS } from '../data/tasks';
+import { TASKS } from '@/data/tasks';
 
 describe('TASKS fallback data', () => {
   it('has a non-empty list of tasks', () => {

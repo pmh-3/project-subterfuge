@@ -1,5 +1,5 @@
-import { getAvatarById, AvatarData } from '../data/avatars';
-import { getAvatarComponent } from '../components/avatars';
+import { getAvatarById, AvatarData } from '@/data/avatars';
+import { getAvatarComponent } from '@/components/avatars';
 
 type AvatarComponentType = React.ComponentType<{ size: number; color: string }>;
 

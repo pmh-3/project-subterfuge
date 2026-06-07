@@ -1,10 +1,10 @@
 import React from 'react';
-import { IconBinoculars } from './IconBinoculars';
-import { IconMartini } from './IconMartini';
-import { IconGlasses } from './IconGlasses';
-import { IconBriefcase } from './IconBriefcase';
-import { IconFedora } from './IconFedora';
-import { IconCamera } from './IconCamera';
+import { IconBinoculars } from '@/components/avatars/IconBinoculars';
+import { IconMartini } from '@/components/avatars/IconMartini';
+import { IconGlasses } from '@/components/avatars/IconGlasses';
+import { IconBriefcase } from '@/components/avatars/IconBriefcase';
+import { IconFedora } from '@/components/avatars/IconFedora';
+import { IconCamera } from '@/components/avatars/IconCamera';
 
 interface AvatarProps {
   size?: number;

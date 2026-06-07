@@ -1,3 +1,14 @@
+export type GameMode = 'CLASSIC' | 'INFINITE';
+
+export interface InfiniteEndCondition {
+  type: 'KILL_GOAL';
+  value: number;
+}
+
+export interface InfiniteConfig {
+  endCondition: InfiniteEndCondition;
+}
+
 export interface Player {
   uid: string;
   callsign: string;
@@ -11,6 +22,7 @@ export interface Player {
   eliminatedBy?: string;
   eliminatedAt?: number;
   killCount?: number;
+  respawnCount?: number;
   rerollsUsed?: number;
   emergencyPin?: string; // 3-digit Agent Key for identity recovery
 }
@@ -22,6 +34,9 @@ export interface Game {
   playerIds: string[];
   createdAt: number;
   winnerId?: string;
+  mode?: GameMode;
+  infiniteConfig?: InfiniteConfig;
+  endsAt?: number;
   // Task pack configuration (set during host configuration)
   selectedPacks?: string[];
   difficultySetting?: 'Mixed' | 'Easy' | 'Medium' | 'Hard';

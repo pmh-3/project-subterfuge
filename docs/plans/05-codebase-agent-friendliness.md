@@ -125,3 +125,45 @@ The file is staged-deleted in the working tree. Restore it, then:
 
 - **Path alias** `@/` (already landed in Phase 1).
 - **Skills location**: in-repo at `.cursor/skills/`. Low priority within Phase 5.
+
+---
+
+## Handoff Note (Phase 5 complete)
+
+**Date:** 2026-06-07  
+**Status:** All ten work items implemented. `npm run verify` green (41 tests).
+
+### What shipped
+
+| Item | Summary |
+|------|---------|
+| AGENT-1 | `AGENTS.md` at repo root — entry point, task table, conventions, verify command |
+| AGENT-2 | All 8 rules audited + cross-refs; new `game-modes.mdc`; `styling-and-theme.mdc` already Midnight Wire |
+| AGENT-3 | `@/` codemod across 35 files in `app/` and `src/` |
+| AGENT-4 | Zod schemas + `firestoreParse.ts`; all `gameService` / `useGame` read boundaries validated |
+| AGENT-5 | `.github/workflows/ci.yml` — verify + web export on PR/main |
+| AGENT-6 | Dual Jest projects (unit node + components jsdom); 5 smoke tests; expanded `__mocks__/react-native.js` |
+| AGENT-7 | 5 ADRs in `docs/adr/` |
+| AGENT-8 | 4 in-repo skills: `add-screen`, `add-game-rule`, `triage-firestore-bug`, `prepare-release` |
+| AGENT-9 | `docs/BACKLOG.md` groomed — Phases 0–5 completed items checked off |
+| AGENT-10 | `npm run verify` confirmed: lint + typecheck + contrast + test |
+
+### Key files
+
+- `AGENTS.md`
+- `client/src/types/schemas.ts`, `client/src/types/firestoreParse.ts`
+- `client/jest.config.js`, `client/jest.setup.tsx`, `client/src/__tests__/components/`
+- `.github/workflows/ci.yml`
+- `.cursor/rules/game-modes.mdc`
+- `.cursor/skills/*/SKILL.md`
+- `docs/adr/0001`–`0005`
+
+### Deviations
+
+- **Component tests:** `jest-expo` preset failed in multi-project Jest (RN `StyleSheet` undefined). Used `ts-jest` + `jsdom` + expanded RN mock instead — same smoke-test goal, documented in `testing-conventions.mdc`.
+- **Phase 4 not complete:** `game-modes.mdc` and ADR-0004 document the locked `INFINITE` decision; Mission Control chip remains disabled until Phase 4 executes.
+- **CI branch protection:** workflow file added; GitHub "required status check" must be enabled manually in repo settings.
+
+### Test count
+
+- 36 unit tests (was 30) + 5 component smoke tests = **41 total**

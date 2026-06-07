@@ -1,0 +1,29 @@
+---
+description: Game mode branching — classic elimination vs infinite (planned). Read before changing gameLogic or gameService.
+globs: "**/gameLogic.ts,**/gameService.ts,**/configure.tsx,**/ContractView.tsx,**/CommandCenterView.tsx"
+alwaysApply: false
+---
+
+# Game Modes
+
+**Entry point:** [`AGENTS.md`](../../AGENTS.md) · **Logic:** `client/src/features/game/gameLogic.ts` · **Writes:** `client/src/features/game/gameService.ts`
+
+## Current state
+
+| Mode | `game.mode` | Status |
+|------|-------------|--------|
+| Classic elimination | absent or `'CLASSIC'` | **Shipped** — default for all games |
+| Infinite (respawn / score-attack) | `'INFINITE'` | **Planned** — UI stub on Mission Control (`Infinite ∞` chip is disabled) |
+
+Absence of `mode` on existing Firestore documents means classic behavior. Do not break this path.
+
+## Rules when touching game logic
+
+1. **Pure functions first** — add mode-specific rules in `gameLogic.ts` with unit tests before wiring Firestore.
+2. **Branch on `game.mode`** in `gameService.ts` mutation paths (`confirmElimination`, `endGame`, etc.). Classic path must remain unchanged when `mode` is absent or `'CLASSIC'`.
+3. **Use `runTransaction`** for any new multi-document write in infinite mode (same class of bug as BUG-1).
+4. **UI** — infinite-only surfaces stay behind the disabled Mission Control chip until Phase 4 ships.
+
+## Regression requirement
+
+A classic-mode game played end-to-end must behave identically to pre-infinite work. When adding infinite support, add tests that assert classic games with no `mode` field still pass existing `gameLogic` tests.

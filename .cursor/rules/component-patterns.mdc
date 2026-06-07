@@ -6,12 +6,15 @@ alwaysApply: false
 
 # Component & Code Patterns
 
+**Entry point:** [`AGENTS.md`](../../AGENTS.md)
+
 ## File Placement
 | Type | Location | Example |
 |------|----------|---------|
 | Screen | `app/game/` | `[id].tsx`, `lobby.tsx` |
 | Feature component | `src/features/{feature}/components/` | `ContractView.tsx` |
-| Shared component | `src/components/` | `Button.tsx`, `ErrorBoundary.tsx` |
+| Shared component | `src/components/` | `ErrorBoundary.tsx` |
+| Design-system primitive | `src/design-system/components/` | `Button.tsx`, `Card.tsx` |
 | Hook | `src/hooks/` (shared) or `src/features/{feature}/` | `useAlert.ts`, `useGame.ts` |
 | Service | `src/features/{feature}/` | `gameService.ts` |
 | Pure logic | `src/features/{feature}/` | `gameLogic.ts` |
@@ -36,7 +39,13 @@ alwaysApply: false
 - New types → `src/types/`
 
 ## Imports
-Use relative imports from the current file location. Common patterns:
-- From screen to src: `../../src/features/game/gameService`
-- From feature component to shared: `../../../theme`, `../../../constants`
-- From src-level: `../utils/storage`, `../hooks/useAlert`
+Always use `@/` for `client/src/` paths (configured in tsconfig, babel, Jest):
+
+```typescript
+import { startGame } from '@/features/game/gameService';
+import { Button, colors } from '@/design-system';
+import { strings } from '@/strings';
+import { useAlert } from '@/hooks/useAlert';
+```
+
+Screens under `client/app/` import from `@/…`, not `../../src/…`.

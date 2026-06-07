@@ -1,4 +1,4 @@
-import { AVATARS, getAvatarById, getDefaultAvatar } from '../data/avatars';
+import { AVATARS, getAvatarById, getDefaultAvatar, getRandomAvatar } from '@/data/avatars';
 
 describe('avatars', () => {
   it('has at least one avatar', () => {
@@ -29,6 +29,18 @@ describe('avatars', () => {
   describe('getDefaultAvatar', () => {
     it('returns the first avatar', () => {
       expect(getDefaultAvatar()).toEqual(AVATARS[0]);
+    });
+  });
+
+  describe('getRandomAvatar', () => {
+    it('returns an avatar from the list', () => {
+      const avatar = getRandomAvatar(() => 0.5);
+      expect(AVATARS).toContainEqual(avatar);
+    });
+
+    it('respects the injected random source', () => {
+      expect(getRandomAvatar(() => 0)).toEqual(AVATARS[0]);
+      expect(getRandomAvatar(() => 0.99)).toEqual(AVATARS[AVATARS.length - 1]);
     });
   });
 });

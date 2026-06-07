@@ -10,11 +10,11 @@ import {
   VICTORY_TYPING_INTERVAL,
   VICTORY_SUBTEXT_DELAY,
   VICTORY_DISMISS_DELAY,
-} from '../constants';
+} from '@/constants';
 
 describe('constants', () => {
-  it('APP_URL is a valid https URL', () => {
-    expect(APP_URL).toMatch(/^https:\/\//);
+  it('APP_URL is midnightwire.app', () => {
+    expect(APP_URL).toBe('https://midnightwire.app');
   });
 
   it('DEFAULT_AVATAR_ID matches an avatar prefix', () => {

@@ -38,3 +38,8 @@ export const getAvatarById = (id: string): AvatarData | undefined => {
 export const getDefaultAvatar = (): AvatarData => {
   return AVATARS[0];
 };
+
+export const getRandomAvatar = (random: () => number = Math.random): AvatarData => {
+  const index = Math.floor(random() * AVATARS.length);
+  return AVATARS[index];
+};
