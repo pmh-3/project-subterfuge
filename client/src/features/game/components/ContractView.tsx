@@ -10,13 +10,13 @@ import {
   Avatar,
   ScreenHeader,
   Button,
+  IconShuffle,
   colors,
   space,
   radius,
 } from '@/design-system';
 import { strings, dynamicStrings } from '@/strings';
 import { DEFAULT_MAX_REROLLS } from '@/constants';
-import { fontFamily } from '@/design-system/tokens/typography';
 
 interface ContractViewProps {
   player: Player;
@@ -24,6 +24,10 @@ interface ContractViewProps {
   isPending: boolean;
   onLogKill: () => void;
   onSwap: () => void;
+  onSwapTarget?: () => void;
+  isInfinite?: boolean;
+  /** Count of currently-alive agents; used to disable target swap when it can't change anything (<3). */
+  aliveCount?: number;
   loading?: boolean;
   maxRerolls?: number;
 }
@@ -34,13 +38,19 @@ export const ContractView = ({
   isPending,
   onLogKill,
   onSwap,
+  onSwapTarget,
+  isInfinite,
+  aliveCount,
   loading,
   maxRerolls,
 }: ContractViewProps) => {
   const effectiveMaxRerolls = maxRerolls ?? DEFAULT_MAX_REROLLS;
   const rerollsLeft = effectiveMaxRerolls - (player.rerollsUsed || 0);
-  const showSwap = effectiveMaxRerolls > 0;
-  const canSwap = showSwap && !isPending && rerollsLeft > 0;
+  const budgetEnabled = effectiveMaxRerolls > 0;
+  const canSwap = budgetEnabled && !isPending && rerollsLeft > 0 && !loading;
+  const targetSwapPossible = aliveCount === undefined || aliveCount >= 3;
+  const canSwapTarget = canSwap && !!isInfinite && !!onSwapTarget && targetSwapPossible;
+  const swapIcon = <IconShuffle size={14} color={colors.inkPrimary} />;
 
   return (
     <View style={styles.container}>
@@ -66,21 +76,35 @@ export const ContractView = ({
             <Text variant="label" muted>
               {strings.CONTRACT_DIRECTIVE}
             </Text>
-            <Text variant="bodyInput" style={styles.directive}>
+            <Text variant="directive" style={styles.directive}>
               {player.taskDescription}
             </Text>
-            {showSwap ? (
+            {budgetEnabled ? (
               <Stack gap={3} style={styles.swapAction}>
                 <Button
                   title={strings.CONTRACT_SWAP_MISSION}
                   onPress={onSwap}
                   variant="ghost"
                   fullWidth
-                  disabled={!canSwap || loading}
+                  leftIcon={swapIcon}
+                  disabled={!canSwap}
                   loading={loading}
                 />
+                {isInfinite && onSwapTarget ? (
+                  <Button
+                    title={strings.CONTRACT_SWAP_TARGET}
+                    onPress={onSwapTarget}
+                    variant="ghost"
+                    fullWidth
+                    leftIcon={swapIcon}
+                    disabled={!canSwapTarget}
+                    loading={loading}
+                  />
+                ) : null}
                 <Text variant="labelMicro" muted style={styles.swapHint}>
-                  {dynamicStrings.swapsLeftThisGame(rerollsLeft)}
+                  {rerollsLeft > 0
+                    ? dynamicStrings.swapsLeftThisGame(rerollsLeft)
+                    : strings.NO_MORE_SWAPS}
                 </Text>
               </Stack>
             ) : null}
@@ -119,9 +143,6 @@ const styles = StyleSheet.create({
   },
   directive: {
     marginTop: space[4],
-    fontFamily: fontFamily.sansSemibold,
-    fontWeight: '600',
-    lineHeight: 28,
   },
   swapAction: {
     marginTop: space[6],

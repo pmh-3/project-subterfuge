@@ -140,6 +140,7 @@ export const strings = {
   GAME_ALERT_FAILED_CONFIRM: 'Failed to confirm status',
   GAME_ALERT_FAILED_DISPUTE: 'Failed to dispute claim',
   GAME_ALERT_FAILED_REASSIGN: 'Failed to swap mission',
+  GAME_ALERT_FAILED_SWAP_TARGET: 'Failed to swap target',
   GAME_ALERT_FAILED_END: 'Failed to end game: ',
 
   // --- Contract view ---
@@ -154,6 +155,7 @@ export const strings = {
   CONTRACT_MISSION_OBJECTIVE: 'MISSION',
   CONTRACT_PENDING_CONFIRMATION: 'PENDING CONFIRMATION',
   CONTRACT_NEUTRALIZE_TARGET: 'CATCH TARGET',
+  NO_MORE_SWAPS: 'No swaps left this game.',
 
   // --- Command center / Situation room ---
   INTEL_KILLER_HOST: 'HOST',

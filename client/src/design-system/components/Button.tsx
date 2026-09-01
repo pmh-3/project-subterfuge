@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   StyleProp,
+  View,
   ViewStyle,
 } from 'react-native';
 import { colors } from '@/design-system/tokens/colors';
@@ -22,6 +23,8 @@ export interface ButtonProps {
   fullWidth?: boolean;
   loading?: boolean;
   disabled?: boolean;
+  /** Optional icon rendered before the title (e.g. a refresh affordance on swap controls). */
+  leftIcon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -33,6 +36,7 @@ export function Button({
   fullWidth,
   loading,
   disabled,
+  leftIcon,
   style,
 }: ButtonProps) {
   const [hovered, setHovered] = useState(false);
@@ -75,12 +79,15 @@ export function Button({
           color={variant === 'ghost' ? colors.inkPrimary : colors.inkOnDark}
         />
       ) : (
-        <Text
-          variant={textVariant}
-          color={variant === 'ghost' ? colors.inkPrimary : colors.inkOnDark}
-        >
-          {title}
-        </Text>
+        <View style={styles.content}>
+          {leftIcon}
+          <Text
+            variant={textVariant}
+            color={variant === 'ghost' ? colors.inkPrimary : colors.inkOnDark}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -91,6 +98,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
   },
   md: {
     paddingVertical: 13,

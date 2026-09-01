@@ -12,6 +12,7 @@ import {
   confirmElimination,
   denyElimination,
   scrambleTask,
+  swapTarget,
   adminForceEliminate,
   endGame,
 } from '@/features/game/gameService';
@@ -195,6 +196,20 @@ export default function GameRoomScreen() {
       await scrambleTask(id!, user!.uid);
     } catch {
       showAlert({ title: strings.ALERT_OPERATION_FAILED_TITLE, message: strings.GAME_ALERT_FAILED_REASSIGN });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const executeSwapTarget = async () => {
+    try {
+      setActionLoading(true);
+      await swapTarget(id!, user!.uid);
+    } catch {
+      showAlert({
+        title: strings.ALERT_OPERATION_FAILED_TITLE,
+        message: strings.GAME_ALERT_FAILED_SWAP_TARGET,
+      });
     } finally {
       setActionLoading(false);
     }
@@ -395,7 +410,7 @@ export default function GameRoomScreen() {
             </Text>
           ) : null}
           {headClaim.taskDescription ? (
-            <Text variant="bodySmall" muted style={styles.alertObjective}>
+            <Text variant="body" style={styles.alertObjective}>
               {dynamicStrings.theirObjectiveWas(headClaim.taskDescription)}
             </Text>
           ) : null}
@@ -465,6 +480,9 @@ export default function GameRoomScreen() {
           isPending={(targetPlayer?.pendingEliminations?.length ?? 0) > 0}
           onLogKill={executeChallenge}
           onSwap={executeSwap}
+          onSwapTarget={executeSwapTarget}
+          isInfinite={isInfinite}
+          aliveCount={alivePlayers.length}
           loading={actionLoading}
           maxRerolls={game.maxRerolls}
         />
@@ -495,8 +513,6 @@ export default function GameRoomScreen() {
         hostId={game.hostId}
         winnerId={game.winnerId}
         isInfinite={isInfinite}
-        gameId={game.id}
-        onCopyGameCode={handleCopyGameCode}
         onOpenInvite={() => setShowInviteSheet(true)}
       />
     );
