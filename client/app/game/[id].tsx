@@ -38,7 +38,7 @@ import { VictoryOverlay } from '@/features/game/components/VictoryOverlay';
 import { useAlert } from '@/hooks/useAlert';
 import { useLayout } from '@/hooks/useLayout';
 import { APP_URL, PULSE_DURATION, SPECTATOR_CHECK_DELAY } from '@/constants';
-import { isInfiniteMode, getKillGoal, buildPendingRows } from '@/features/game/gameLogic';
+import { isInfiniteMode, getKillGoal, buildPendingRows, hasCallerClaimOnTarget } from '@/features/game/gameLogic';
 import { storage } from '@/utils/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
@@ -609,7 +609,7 @@ export default function GameRoomScreen() {
         <ContractView
           player={me}
           targetAvatarId={targetPlayer?.avatarId}
-          isPending={(targetPlayer?.pendingEliminations?.length ?? 0) > 0}
+          isPending={hasCallerClaimOnTarget(targetPlayer, user?.uid)}
           onLogKill={executeChallenge}
           onSwap={executeSwap}
           onSwapTarget={executeSwapTarget}

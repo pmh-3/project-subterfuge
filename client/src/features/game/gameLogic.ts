@@ -411,6 +411,24 @@ export interface PendingRow {
 }
 
 /**
+ * True only if `callerId` personally has an outstanding claim against `target`.
+ *
+ * Shared targets (D5) mean a target's `pendingEliminations` queue can hold claims from
+ * several different agents at once. The Contract view's "awaiting confirmation" panel must
+ * freeze only the agent who actually made the claim — a co-hunter who has *not* claimed the
+ * same shared target yet must still be able to tap Catch and use their swap controls. Scoping
+ * to the caller (rather than "does the target have any pending claim at all") is what makes
+ * that possible.
+ */
+export function hasCallerClaimOnTarget(
+  target: Pick<Player, 'pendingEliminations'> | undefined,
+  callerId: string | undefined,
+): boolean {
+  if (!callerId) return false;
+  return (target?.pendingEliminations ?? []).some((e) => e.assassinId === callerId);
+}
+
+/**
  * Flatten every player's `pendingEliminations[]` queue into a single global,
  * FIFO-ordered list for the host panel: "assassin → target : mission". Pure —
  * no Firebase, so it is trivially unit-testable and reusable from any caller.
