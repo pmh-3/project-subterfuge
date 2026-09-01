@@ -379,16 +379,24 @@ export default function GameRoomScreen() {
     );
   }
 
-  if (me?.pendingEliminationBy && !isCompleted) {
+  const pendingQueue = me?.pendingEliminations ?? [];
+  const headClaim = pendingQueue[0];
+
+  if (headClaim && !isCompleted) {
     return (
       <SafeAreaView style={[styles.container, styles.alertContainer]}>
         <Stack gap={8} align="center" style={styles.alertContent}>
           <Text variant="display" color={colors.danger}>
             {strings.GAME_ALERT_COMPROMISED}
           </Text>
-          {me.pendingTaskDescription ? (
+          {pendingQueue.length > 1 ? (
             <Text variant="bodySmall" muted style={styles.alertObjective}>
-              {dynamicStrings.theirObjectiveWas(me.pendingTaskDescription)}
+              {dynamicStrings.multipleClaimsNote(pendingQueue.length)}
+            </Text>
+          ) : null}
+          {headClaim.taskDescription ? (
+            <Text variant="bodySmall" muted style={styles.alertObjective}>
+              {dynamicStrings.theirObjectiveWas(headClaim.taskDescription)}
             </Text>
           ) : null}
           <Button
@@ -454,7 +462,7 @@ export default function GameRoomScreen() {
         <ContractView
           player={me}
           targetAvatarId={targetPlayer?.avatarId}
-          isPending={!!targetPlayer?.pendingEliminationBy}
+          isPending={(targetPlayer?.pendingEliminations?.length ?? 0) > 0}
           onLogKill={executeChallenge}
           onScramble={executeScramble}
           loading={actionLoading}
