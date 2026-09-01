@@ -235,6 +235,9 @@ export const dynamicStrings = {
   forceEliminateConfirm: (name: string) =>
     `Remove ${name} from the game? Their target will be reassigned to someone else.`,
   theirObjectiveWas: (task: string) => `THEIR CONTRACT: ${task}`,
+  // Temporary copy (final wording is a later workstream): shown when several
+  // assassins have stacked claims against the same victim.
+  multipleClaimsNote: (n: number) => `${n} agents are claiming you — confirm each.`,
   rosterSectionTitle: (title: string, count: number) => `${title} (${count})`,
   killedBy: (killerName: string) => `by ${killerName}`,
   activeAgentsCount: (count: number) => `ACTIVE AGENTS (${count})`,
@@ -256,6 +259,8 @@ export const serviceErrors = {
   ASSASSIN_NOT_FOUND: 'Assassin not found',
   PLAYER_NOT_FOUND: 'Player not found',
   NO_MORE_OBJECTIVE_CHANGES: 'No more objective changes allowed',
+  NO_MORE_SWAPS: 'No swaps remaining',
+  TARGET_SWAP_CLASSIC_ONLY: 'Target swaps are only available in infinite mode',
   INVALID_RECOVERY_PIN: 'Invalid Recovery PIN or Game ID',
   OPERATION_FULL: 'This operation is at capacity (40 agents max)',
   PLAYER_NOT_ALIVE: 'You are not active in this operation',
