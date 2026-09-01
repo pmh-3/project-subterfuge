@@ -15,6 +15,7 @@ import {
   isInfiniteMode,
   computeIndependentKill,
   computeIndependentJoin,
+  computeForceRemoveReassignments,
   pickIndependentTarget,
   isGameOver,
 } from '@/features/game/gameLogic';
@@ -483,22 +484,16 @@ export const adminForceEliminate = async (gameId: string, targetId: string) => {
         pendingEliminations: [],
       });
 
-      // Reassign every ALIVE agent who was targeting the removed player.
-      const playersAfterRemoval = allPlayerDocs
-        .map((d) => d.data)
-        .map((p) => (p.uid === targetId ? { ...p, status: 'ELIMINATED' as const } : p));
-
-      for (const { id, data } of allPlayerDocs) {
-        if (id === targetId) continue;
-        if (data.status === 'ALIVE' && data.targetId === targetId) {
-          const newTargetId = pickIndependentTarget(id, playersAfterRemoval);
-          const newTarget = playersAfterRemoval.find((p) => p.uid === newTargetId);
-          const pRef = doc(db, 'games', gameId, 'players', id);
-          transaction.update(pRef, {
-            targetId: newTargetId,
-            targetCallsign: newTarget?.callsign ?? '',
-          });
-        }
+      // Reassign every ALIVE agent who was targeting the removed player. The pure
+      // helper handles the no-eligible-target case (lone survivor at N=2) by
+      // clearing the target instead of throwing, so the removal never aborts.
+      const reassignments = computeForceRemoveReassignments(
+        targetId,
+        allPlayerDocs.map((d) => d.data),
+      );
+      for (const { uid, targetId: newTargetId, targetCallsign } of reassignments) {
+        const pRef = doc(db, 'games', gameId, 'players', uid);
+        transaction.update(pRef, { targetId: newTargetId, targetCallsign });
       }
     });
     return;

@@ -2,6 +2,7 @@ import {
   pickIndependentTarget,
   computeIndependentKill,
   computeIndependentJoin,
+  computeForceRemoveReassignments,
   validateIndependentTargets,
   isGameOver,
   sortPlayersByLeaderboard,
@@ -265,6 +266,56 @@ describe('infinite mode pure logic (Option E — independent targets)', () => {
       expect(Object.keys(fields).sort()).toEqual(
         ['targetCallsign', 'targetId', 'taskDescription'].sort(),
       );
+    });
+  });
+
+  describe('computeForceRemoveReassignments', () => {
+    it('reassigns only the removed player hunters and changes no one else (N>=3)', () => {
+      // c is removed. Its hunters: a (a->c) and d (d->c). b hunts a — untouched.
+      const players = [
+        makePlayer('a', 'A', 'c', 'C'),
+        makePlayer('b', 'B', 'a', 'A'),
+        makePlayer('c', 'C', 'b', 'B'),
+        makePlayer('d', 'D', 'c', 'C'),
+      ];
+      const reassignments = computeForceRemoveReassignments('c', players, seededRng(4));
+      const uids = reassignments.map((r) => r.uid).sort();
+      expect(uids).toEqual(['a', 'd']);
+      for (const r of reassignments) {
+        expect(r.targetId).not.toBe('c'); // never re-target the removed player
+        expect(r.targetId).not.toBe(r.uid); // never self
+        expect(['a', 'b', 'd']).toContain(r.targetId); // an ALIVE non-removed agent
+        expect(r.targetCallsign).toBeTruthy();
+      }
+      // b was not hunting c → no reassignment produced for it.
+      expect(reassignments.find((r) => r.uid === 'b')).toBeUndefined();
+    });
+
+    it('does NOT throw at N=2 and clears the lone survivor target', () => {
+      // A<->B. Remove B. A was hunting B → no eligible target remains.
+      const players = [
+        makePlayer('a', 'A', 'b', 'B'),
+        makePlayer('b', 'B', 'a', 'A'),
+      ];
+      let reassignments: ReturnType<typeof computeForceRemoveReassignments> = [];
+      expect(() => {
+        reassignments = computeForceRemoveReassignments('b', players, seededRng(1));
+      }).not.toThrow();
+      expect(reassignments).toEqual([
+        { uid: 'a', targetId: null, targetCallsign: null },
+      ]);
+    });
+
+    it('ignores hunters that were not targeting the removed player', () => {
+      const players = [
+        makePlayer('a', 'A', 'b', 'B'),
+        makePlayer('b', 'B', 'c', 'C'),
+        makePlayer('c', 'C', 'a', 'A'),
+      ];
+      // Remove c: only b hunts c.
+      const reassignments = computeForceRemoveReassignments('c', players, seededRng(2));
+      expect(reassignments.map((r) => r.uid)).toEqual(['b']);
+      expect(reassignments[0]!.targetId).toBe('a'); // only eligible remaining
     });
   });
 

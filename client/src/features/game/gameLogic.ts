@@ -211,6 +211,58 @@ export function computeIndependentJoin(
 }
 
 /**
+ * A single per-hunter target reassignment produced when a player is force-removed
+ * from an infinite game. `targetId: null` means the hunter has no eligible target
+ * left (e.g. a lone survivor once everyone else is gone) — the round is
+ * effectively over; clear the target rather than aborting.
+ */
+export interface ForceRemoveReassignment {
+  uid: string;
+  targetId: string | null;
+  targetCallsign: string | null;
+}
+
+/**
+ * Computes the target reassignments needed when `removedId` leaves an infinite
+ * game (host force-remove). Every ALIVE agent that was hunting the removed player
+ * gets a fresh target; no other agent is touched. Gracefully handles the
+ * no-eligible-target case (returns `targetId: null`) instead of throwing, so the
+ * removal transaction never aborts at small player counts (e.g. N=2).
+ */
+export function computeForceRemoveReassignments(
+  removedId: string,
+  players: Pick<Player, 'uid' | 'callsign' | 'status' | 'targetId'>[],
+  rng: () => number = Math.random,
+): ForceRemoveReassignment[] {
+  // State AFTER the removal: the removed player is no longer ALIVE.
+  const playersAfterRemoval = players.map((p) =>
+    p.uid === removedId ? { ...p, status: 'ELIMINATED' as const } : p,
+  );
+
+  const reassignments: ForceRemoveReassignment[] = [];
+  for (const player of players) {
+    if (player.uid === removedId) continue;
+    if (player.status !== 'ALIVE') continue;
+    if (player.targetId !== removedId) continue;
+
+    try {
+      const newTargetId = pickIndependentTarget(player.uid, playersAfterRemoval, undefined, rng);
+      const newTarget = playersAfterRemoval.find((p) => p.uid === newTargetId);
+      reassignments.push({
+        uid: player.uid,
+        targetId: newTargetId,
+        targetCallsign: newTarget?.callsign ?? '',
+      });
+    } catch {
+      // No eligible target remains (lone survivor). Clear the target — the round
+      // is effectively over — rather than aborting the whole removal.
+      reassignments.push({ uid: player.uid, targetId: null, targetCallsign: null });
+    }
+  }
+  return reassignments;
+}
+
+/**
  * Infinite-mode integrity check (replaces the Hamiltonian walk for infinite).
  * Every ALIVE agent must have a target that is a distinct, existing ALIVE agent.
  * In-degree is unconstrained — shared targets are allowed.
