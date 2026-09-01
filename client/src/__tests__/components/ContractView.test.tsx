@@ -129,4 +129,26 @@ describe('ContractView swap controls', () => {
       false,
     );
   });
+
+  it('disables both swap controls while a confirmation is pending', () => {
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+      />,
+    );
+
+    expect(findAncestorPressable(screen.getByText(strings.CONTRACT_SWAP_MISSION))?.props.disabled).toBe(
+      true,
+    );
+    expect(findAncestorPressable(screen.getByText(strings.CONTRACT_SWAP_TARGET))?.props.disabled).toBe(
+      true,
+    );
+  });
 });

@@ -250,6 +250,30 @@ describe('infinite mode pure logic (Option E — independent targets)', () => {
       expect(dAfter!.targetId).toBe(dBefore.targetId);
       expect(validateIndependentTargets(after).valid).toBe(true);
     });
+
+    // D1 lock (00-decisions.md): the swap budget is a fixed per-game allowance that
+    // only the explicit Swap button may charge. A kill/respawn must never touch it,
+    // or the player's swaps would silently appear to "reset" every contract.
+    it('D1 lock: neither victimUpdate nor assassinUpdate touches rerollsUsed', () => {
+      const players = [
+        makePlayer('a', 'A', 'b', 'B', { rerollsUsed: 2 }),
+        makePlayer('b', 'B', 'c', 'C', { rerollsUsed: 4 }),
+        makePlayer('c', 'C', 'a', 'A', { rerollsUsed: 0 }),
+      ];
+      const victim = players.find((p) => p.uid === 'b')!;
+      const { victimUpdate, assassinUpdate } = computeIndependentKill(
+        victim,
+        'a',
+        0,
+        players,
+        TASKS,
+        'a',
+        true,
+        seededRng(5),
+      );
+      expect('rerollsUsed' in victimUpdate).toBe(false);
+      expect('rerollsUsed' in assassinUpdate).toBe(false);
+    });
   });
 
   describe('computeIndependentJoin', () => {
@@ -267,6 +291,18 @@ describe('infinite mode pure logic (Option E — independent targets)', () => {
       expect(Object.keys(fields).sort()).toEqual(
         ['targetCallsign', 'targetId', 'taskDescription'].sort(),
       );
+    });
+
+    // D1 lock: a newcomer's rerollsUsed is initialized to 0 by the service (joinGame),
+    // not by this pure function — computeIndependentJoin's output must not carry the key.
+    it('D1 lock: output does not contain rerollsUsed', () => {
+      const players = [
+        makePlayer('a', 'A', 'b', 'B'),
+        makePlayer('b', 'B', 'c', 'C'),
+        makePlayer('c', 'C', 'a', 'A'),
+      ];
+      const fields = computeIndependentJoin('d', players, TASKS, seededRng(9));
+      expect('rerollsUsed' in fields).toBe(false);
     });
   });
 

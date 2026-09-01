@@ -235,7 +235,6 @@ export const dynamicStrings = {
   identityConflictSubtitle: (name: string) =>
     `"${name}" is already in this game on another device.\nEnter your Agent Key to reclaim that spot.`,
   swapsLeftThisGame: (n: number) => `${n} swap${n === 1 ? '' : 's'} left`,
-  deathCount: (n: number) => `${n} time${n === 1 ? '' : 's'}`,
   forceEliminateConfirm: (name: string) =>
     `Remove ${name} from the game? Their target will be reassigned to someone else.`,
   theirObjectiveWas: (task: string) => `THEIR MISSION: ${task}`,
