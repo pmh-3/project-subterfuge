@@ -290,6 +290,7 @@ export const serviceErrors = {
   PLAYER_NOT_FOUND: 'Agent not found',
   NO_MORE_SWAPS: 'No swaps left.',
   TARGET_SWAP_CLASSIC_ONLY: 'Target swaps are only available in infinite mode',
+  NO_ELIGIBLE_SWAP_TARGET: 'No other agent available to swap to.',
   INVALID_RECOVERY_PIN: 'Invalid Agent Key or Game Code',
   OPERATION_FULL: 'This game is full (40 agents max)',
   PLAYER_NOT_ALIVE: 'You are not active in this game',

@@ -622,11 +622,17 @@ export const swapTarget = async (gameId: string, playerId: string) => {
     const currentRerolls = player.rerollsUsed || 0;
     if (currentRerolls >= maxRerolls) throw new Error(serviceErrors.NO_MORE_SWAPS);
 
-    const newTargetId = pickIndependentTarget(
-      playerId,
-      allPlayerDocs.map((d) => d.data),
-      player.targetId ?? undefined,
+    // Defense in depth: the UI disables Swap Target below 3 alive agents (a swap couldn't
+    // change anything at 2), but the service must not trust that. Without this guard,
+    // pickIndependentTarget falls back to returning the SAME target when it is the only
+    // other alive agent — silently charging a reroll for a no-op swap.
+    const allPlayers = allPlayerDocs.map((d) => d.data);
+    const hasDifferentEligibleTarget = allPlayers.some(
+      (p) => p.status === 'ALIVE' && p.uid !== playerId && p.uid !== player.targetId,
     );
+    if (!hasDifferentEligibleTarget) throw new Error(serviceErrors.NO_ELIGIBLE_SWAP_TARGET);
+
+    const newTargetId = pickIndependentTarget(playerId, allPlayers, player.targetId ?? undefined);
     const newTarget = allPlayerDocs.find((d) => d.id === newTargetId)?.data;
 
     transaction.update(playerRef, {

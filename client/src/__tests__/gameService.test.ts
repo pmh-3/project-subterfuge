@@ -1,9 +1,10 @@
-import { createGame, confirmElimination, denyElimination, scrambleTask } from '@/features/game/gameService';
+import { createGame, confirmElimination, denyElimination, scrambleTask, swapTarget } from '@/features/game/gameService';
 import { isInfiniteMode } from '@/features/game/gameLogic';
 import { DEFAULT_INFINITE_KILL_GOAL } from '@/constants';
 import { Game, Player } from '@/types';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
+import { serviceErrors } from '@/strings';
 
 const mockSetDoc = jest.fn().mockResolvedValue(undefined);
 
@@ -333,5 +334,92 @@ describe('mid-game difficulty/packs change is future-only (D6)', () => {
     // provably untouched.
     expect(p2.taskDescription).toBe('Another original directive');
     expect(p2.rerollsUsed).toBe(0);
+  });
+});
+
+describe('swapTarget — no-op guard at 2 alive agents (defense in depth)', () => {
+  const GAME_ID = 'G3';
+
+  const seedTwoPlayerGame = (): void => {
+    store.clear();
+
+    const game: Game = {
+      id: GAME_ID,
+      hostId: 'host',
+      status: 'ACTIVE',
+      playerIds: ['p1', 'p2'],
+      createdAt: Date.now(),
+      mode: 'INFINITE',
+      infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: 99 } },
+      selectedPacks: ['basic_training'],
+      difficultySetting: 'Mixed',
+      maxRerolls: 5,
+    };
+    store.set(`games/${GAME_ID}`, game);
+
+    const p1: Player = {
+      uid: 'p1',
+      callsign: 'One',
+      status: 'ALIVE',
+      targetId: 'p2',
+      targetCallsign: 'Two',
+      taskDescription: 'Directive one',
+      killCount: 0,
+      respawnCount: 0,
+      rerollsUsed: 0,
+    };
+    store.set(`games/${GAME_ID}/players/p1`, p1);
+
+    const p2: Player = {
+      uid: 'p2',
+      callsign: 'Two',
+      status: 'ALIVE',
+      targetId: 'p1',
+      targetCallsign: 'One',
+      taskDescription: 'Directive two',
+      killCount: 0,
+      respawnCount: 0,
+      rerollsUsed: 0,
+    };
+    store.set(`games/${GAME_ID}/players/p2`, p2);
+  };
+
+  beforeEach(() => {
+    seedTwoPlayerGame();
+  });
+
+  it('throws NO_ELIGIBLE_SWAP_TARGET at 2 alive agents instead of silently returning the same target', async () => {
+    // Only 'p2' is alive besides the caller, and it is already p1's target — there is no
+    // DIFFERENT eligible target to swap to. The UI already disables this control below 3
+    // alive agents; this proves the service enforces it too.
+    await expect(swapTarget(GAME_ID, 'p1')).rejects.toThrow(serviceErrors.NO_ELIGIBLE_SWAP_TARGET);
+
+    const p1 = store.get(`games/${GAME_ID}/players/p1`) as Player;
+    // Not charged: target and rerollsUsed both untouched.
+    expect(p1.targetId).toBe('p2');
+    expect(p1.rerollsUsed).toBe(0);
+  });
+
+  it('succeeds and charges exactly one reroll when a third alive agent makes a different target available', async () => {
+    const p3: Player = {
+      uid: 'p3',
+      callsign: 'Three',
+      status: 'ALIVE',
+      targetId: 'p1',
+      targetCallsign: 'One',
+      taskDescription: 'Directive three',
+      killCount: 0,
+      respawnCount: 0,
+      rerollsUsed: 0,
+    };
+    store.set(`games/${GAME_ID}/players/p3`, p3);
+    const game = store.get(`games/${GAME_ID}`) as Game;
+    store.set(`games/${GAME_ID}`, { ...game, playerIds: ['p1', 'p2', 'p3'] });
+
+    await swapTarget(GAME_ID, 'p1');
+
+    const p1 = store.get(`games/${GAME_ID}/players/p1`) as Player;
+    expect(p1.targetId).toBe('p3');
+    expect(p1.rerollsUsed).toBe(1);
   });
 });
