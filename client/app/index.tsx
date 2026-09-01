@@ -17,6 +17,7 @@ import { useLayout } from '@/hooks/useLayout';
 import { strings } from '@/strings';
 import { BriefingView } from '@/features/game/components/BriefingView';
 import { WelcomeTagline } from '@/components/WelcomeTagline';
+import { ProductLogo, PRODUCT_MARK_SIZES } from '@/components/branding';
 import { HELP_BUTTON_PULSE_DURATION } from '@/constants';
 
 export default function WelcomeScreen() {
@@ -78,9 +79,13 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={[styles.hero, contentStyle]}>
-        <Text variant="displayHero" style={styles.title}>
-          {strings.HOME_TITLE}
-        </Text>
+        <ProductLogo
+          layout="stacked"
+          markSize={PRODUCT_MARK_SIZES.lg}
+          titleVariant="displayHero"
+          titleStyle={styles.logoTitle}
+          style={styles.logo}
+        />
         <WelcomeTagline />
       </View>
 
@@ -130,12 +135,19 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    width: '100%',
     paddingVertical: space[10],
+    gap: space[10],
   },
-  title: {
-    fontSize: 58,
-    lineHeight: 58 * 0.95,
+  logo: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  logoTitle: {
+    fontSize: 52,
+    lineHeight: 52 * 0.95,
+    textAlign: 'center',
   },
   actions: {
     width: '100%',

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet } from 'react-native';
-import { Text, Stack, space } from '@/design-system';
+import { Text, Stack } from '@/design-system';
 import { TAGLINE_ROTATE_INTERVAL } from '@/constants';
 import { strings } from '@/strings';
 
@@ -42,7 +42,7 @@ export function WelcomeTagline() {
         {strings.HOME_TAGLINE}
       </Text>
       <Animated.View style={{ opacity }}>
-        <Text variant="bodySmall" muted style={styles.rotate}>
+        <Text variant="body" muted style={styles.rotate}>
           {ROTATING_LINES[index]}
         </Text>
       </Animated.View>
@@ -52,14 +52,17 @@ export function WelcomeTagline() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: space[8],
     maxWidth: 320,
+    width: '100%',
+    alignItems: 'center',
   },
   tagline: {
-    lineHeight: 24,
+    lineHeight: 26,
+    textAlign: 'center',
   },
   rotate: {
-    lineHeight: 20,
-    minHeight: 20,
+    lineHeight: 26,
+    minHeight: 26,
+    textAlign: 'center',
   },
 });

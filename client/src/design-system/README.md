@@ -25,7 +25,7 @@ Dev gallery (web / sim): navigate to `/_dev/gallery` while `__DEV__` is true.
 - **Page:** `background` → `surface` for cards
 - **Text:** `inkPrimary` / `inkSecondary` / `inkMuted` / `inkOnDark` on dark fills
 - **Active only:** `accent`, `accentTint`, `accentText` — never decorative
-- **Actions:** `danger` + `dangerHover` for hold-to-confirm only; `success*` for confirmation panels
+- **Actions:** `danger` for destructive taps (neutralize, end operation); `success*` for confirmation panels
 
 ### Typography jobs
 
@@ -52,7 +52,7 @@ Android: typewriter sizes &lt; 9px bump to 9 via `typewriterSize()`.
 | Bottom in-game nav | `NavBar` |
 | Primary CTA (one per screen) | `Button variant="primary"` |
 | Secondary action | `Button variant="ghost"` |
-| Neutralize target | `HoldToConfirm` (only `danger` use) |
+| Neutralize target | `Button` (`danger`) |
 | Theme / mode picker rows | `SegmentChips` |
 | Difficulty / count toggles | `PillSegments` |
 | Dossier panel | `Card` or `Card folderTab="…"` |

@@ -29,7 +29,7 @@ firebase deploy --only hosting
 
 5. **Manual smoke** on `https://midnightwire.app` (or staging):
    - Home → join flow → lobby → start game (2 tabs)
-   - Hold-to-confirm on Contract tab
+   - Tap neutralize on Contract tab
    - Elimination confirm/deny flow
 
 ## Pre-merge gate

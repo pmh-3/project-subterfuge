@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, View, StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { Text, Row, space } from '@/design-system';
+import { TextVariant } from '@/design-system/tokens/typography';
 import { strings } from '@/strings';
 import { ProductMark, ProductMarkVariant } from '@/components/branding/ProductMark';
 
@@ -18,6 +19,8 @@ export interface ProductLogoProps {
   markSize?: number;
   markVariant?: ProductMarkVariant;
   title?: string;
+  titleVariant?: TextVariant;
+  titleStyle?: StyleProp<TextStyle>;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -27,15 +30,21 @@ export function ProductLogo({
   markSize = PRODUCT_MARK_SIZES.md,
   markVariant = 'full',
   title = strings.REVEAL_BRAND_TITLE,
+  titleVariant = 'displayLarge',
+  titleStyle,
   style,
 }: ProductLogoProps) {
   const mark = <ProductMark size={markSize} variant={markVariant} />;
+  const titleStyles = [
+    layout === 'stacked' ? styles.stackedTitle : styles.inlineTitle,
+    titleStyle,
+  ];
 
   if (layout === 'inline') {
     return (
       <Row gap={6} align="center" style={style}>
         {mark}
-        <Text variant="displayLarge" style={styles.inlineTitle}>
+        <Text variant={titleVariant} style={titleStyles}>
           {title}
         </Text>
       </Row>
@@ -45,7 +54,7 @@ export function ProductLogo({
   return (
     <View style={[styles.stacked, style]}>
       {mark}
-      <Text variant="displayLarge" style={styles.stackedTitle}>
+      <Text variant={titleVariant} style={titleStyles}>
         {title}
       </Text>
     </View>
@@ -55,7 +64,7 @@ export function ProductLogo({
 const styles = StyleSheet.create({
   stacked: {
     alignItems: 'center',
-    gap: space[6],
+    gap: space[10],
   },
   stackedTitle: {
     textAlign: 'center',

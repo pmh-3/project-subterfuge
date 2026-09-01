@@ -70,7 +70,7 @@ project-subterfuge/
 │   │   │   ├── auth/           # AuthContext (anonymous auth)
 │   │   │   ├── game/           # gameService, useGame, game components
 │   │   │   └── tasks/          # taskService (Firestore pack/mission queries)
-│   │   ├── hooks/              # Shared hooks (useAlert, useHoldToConfirm)
+│   │   ├── hooks/              # Shared hooks (useAlert)
 │   │   ├── services/firebase/  # Firebase SDK init & config
 │   │   ├── theme.ts            # Design tokens (colors, spacing, typography)
 │   │   ├── types/              # TypeScript interfaces (Game, Player, TaskPack)

@@ -16,8 +16,6 @@ export const INFINITE_KILL_GOAL_MIN = 1;
 export const INFINITE_KILL_GOAL_MAX = 99;
 
 // Animation / interaction durations (ms)
-export const HOLD_DURATION = 1000;
-export const HOLD_RESET_DURATION = 150;
 export const PULSE_DURATION = 800;
 export const SPECTATOR_CHECK_DELAY = 600;
 export const VICTORY_TYPING_INTERVAL = 150;

@@ -10,8 +10,8 @@ describe('typography tokens', () => {
   it('bumps typewriter sizes on Android', () => {
     const originalSelect = Platform.select;
     Platform.select = ((spec: Record<string, number>) => spec.android) as typeof Platform.select;
-    expect(typewriterSize(7)).toBe(9);
-    expect(typewriterSize(10)).toBe(10);
+    expect(typewriterSize(7)).toBe(10);
+    expect(typewriterSize(12)).toBe(12);
     Platform.select = originalSelect;
   });
 

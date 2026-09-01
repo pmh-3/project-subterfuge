@@ -27,7 +27,7 @@ describe('WelcomeScreen', () => {
   it('renders the home title and primary actions', () => {
     render(<WelcomeScreen />);
 
-    expect(screen.getByText(strings.HOME_TITLE)).toBeTruthy();
+    expect(screen.getByText(strings.REVEAL_BRAND_TITLE)).toBeTruthy();
     expect(screen.getByText(strings.LOBBY_JOIN_OPERATION)).toBeTruthy();
     expect(screen.getByText(strings.LOBBY_START_OPERATION)).toBeTruthy();
   });

@@ -14,11 +14,6 @@ export { IconShuffle, type IconShuffleProps } from '@/design-system/components/I
 export { Input, type InputProps } from '@/design-system/components/Input';
 export { SegmentChips, type SegmentChipsProps, type SegmentChipOption } from '@/design-system/components/SegmentChips';
 export { PillSegments, type PillSegmentsProps, type PillSegmentOption } from '@/design-system/components/PillSegments';
-export {
-  HoldToConfirm,
-  type HoldToConfirmProps,
-  type HoldToConfirmVariant,
-} from '@/design-system/components/HoldToConfirm';
 export { Avatar, type AvatarProps } from '@/design-system/components/Avatar';
 export { Badge, type BadgeProps, type BadgeVariant } from '@/design-system/components/Badge';
 export { AgentRow, type AgentRowProps } from '@/design-system/components/AgentRow';

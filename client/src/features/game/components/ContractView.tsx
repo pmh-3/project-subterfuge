@@ -8,7 +8,6 @@ import {
   Stack,
   Row,
   Avatar,
-  HoldToConfirm,
   ScreenHeader,
   Button,
   colors,
@@ -96,10 +95,11 @@ export const ContractView = ({
               </Text>
             </View>
           ) : (
-            <HoldToConfirm
-              onConfirm={onLogKill}
-              label={strings.CONTRACT_HOLD_TO_NEUTRALIZE}
-              helperText=""
+            <Button
+              title={strings.CONTRACT_NEUTRALIZE_TARGET}
+              onPress={onLogKill}
+              variant="danger"
+              fullWidth
               loading={loading}
               disabled={loading}
             />

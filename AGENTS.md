@@ -54,7 +54,7 @@ npm run verify         # lint + typecheck + contrast check + test — run before
 - **UI:** `@/design-system` tokens and primitives only — no inline hex, no shadows, no gradients
 - **Alerts:** `useAlert()` hook — never `Alert.alert` or `window.alert`
 - **Storage:** `storage.save/get/delete` from `@/utils/storage` — never `localStorage` / `SecureStore` directly
-- **Hold interactions:** `useHoldToConfirm` or `<HoldToConfirm />` — don't reimplement
+- **Destructive actions:** `Button` variant `danger` for neutralize / end operation — simple tap, no hold
 - **Avatars:** `getAvatarDisplay(avatarId)` from `@/utils/avatarDisplay`
 - **Errors:** `catch (e)` + `e instanceof Error` — never `catch (e: any)`
 - **Constants:** magic numbers in `@/constants`; colors in `@/design-system/tokens`

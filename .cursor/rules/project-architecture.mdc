@@ -40,7 +40,7 @@ client/
 │   │   │   ├── useGame.ts        # Real-time Firestore subscription hook
 │   │   │   └── components/       # Game-specific UI (ContractView, CommandCenterView, etc.)
 │   │   └── tasks/taskService.ts  # Firestore queries for packs/missions
-│   ├── hooks/                    # useAlert, useHoldToConfirm
+│   ├── hooks/                    # useAlert
 │   └── utils/                    # storage.ts, gameUtils.ts, avatarDisplay.ts
 ```
 
