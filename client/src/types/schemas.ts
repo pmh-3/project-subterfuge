@@ -37,6 +37,13 @@ export const TaskPackSchema = z.object({
   tasks: z.array(TaskSchema),
 });
 
+export const PendingEliminationSchema = z.object({
+  assassinId: z.string(),
+  assassinCallsign: z.string(),
+  taskDescription: z.string(),
+  claimedAt: z.number(),
+});
+
 export const PlayerSchema = z.object({
   uid: z.string(),
   callsign: z.string(),
@@ -45,8 +52,7 @@ export const PlayerSchema = z.object({
   targetId: z.string().nullish(),
   targetCallsign: z.string().nullish(),
   taskDescription: z.string().nullish(),
-  pendingEliminationBy: z.string().nullish(),
-  pendingTaskDescription: z.string().nullish(),
+  pendingEliminations: z.array(PendingEliminationSchema).nullish(),
   eliminatedBy: z.string().nullish(),
   eliminatedAt: z.number().nullish(),
   killCount: z.number().nullish(),
