@@ -24,7 +24,7 @@ alwaysApply: false
 - Functional components only (no class components except ErrorBoundary)
 - Colocate `StyleSheet.create` at bottom of same file
 - Props interfaces defined in same file, named `{Component}Props`
-- Use `useHoldToConfirm` hook for press-and-hold interactions (don't reimplement)
+- Use `Button` variant `danger` for destructive taps (neutralize target, end operation) — no hold-to-confirm
 - Use `getAvatarDisplay(avatarId)` from `utils/avatarDisplay.ts` for avatar lookups (don't call `getAvatarById` + `getAvatarComponent` separately)
 
 ## Hook Rules

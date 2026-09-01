@@ -8,25 +8,32 @@ import {
   Stack,
   Row,
   Avatar,
-  HoldToConfirm,
   ScreenHeader,
   Button,
+  IconShuffle,
   colors,
   space,
   radius,
 } from '@/design-system';
 import { strings, dynamicStrings } from '@/strings';
 import { DEFAULT_MAX_REROLLS } from '@/constants';
-import { fontFamily } from '@/design-system/tokens/typography';
+import { CoachCard } from '@/features/game/components/CoachCard';
 
 interface ContractViewProps {
   player: Player;
   targetAvatarId?: string;
   isPending: boolean;
   onLogKill: () => void;
-  onScramble: () => void;
+  onSwap: () => void;
+  onSwapTarget?: () => void;
+  isInfinite?: boolean;
+  /** Count of currently-alive agents; used to disable target swap when it can't change anything (<3). */
+  aliveCount?: number;
   loading?: boolean;
   maxRerolls?: number;
+  /** First-run coach card (D9, #9). Visibility/persistence owned by the caller. */
+  showCoach?: boolean;
+  onDismissCoach?: () => void;
 }
 
 export const ContractView = ({
@@ -34,18 +41,28 @@ export const ContractView = ({
   targetAvatarId,
   isPending,
   onLogKill,
-  onScramble,
+  onSwap,
+  onSwapTarget,
+  isInfinite,
+  aliveCount,
   loading,
   maxRerolls,
+  showCoach,
+  onDismissCoach,
 }: ContractViewProps) => {
   const effectiveMaxRerolls = maxRerolls ?? DEFAULT_MAX_REROLLS;
   const rerollsLeft = effectiveMaxRerolls - (player.rerollsUsed || 0);
-  const showSwap = effectiveMaxRerolls > 0;
-  const canShuffle = showSwap && !isPending && rerollsLeft > 0;
+  const budgetEnabled = effectiveMaxRerolls > 0;
+  const canSwap = budgetEnabled && !isPending && rerollsLeft > 0 && !loading;
+  const targetSwapPossible = aliveCount === undefined || aliveCount >= 3;
+  const canSwapTarget = canSwap && !!isInfinite && !!onSwapTarget && targetSwapPossible;
+  const swapIcon = <IconShuffle size={14} color={colors.inkPrimary} />;
 
   return (
     <View style={styles.container}>
       <ScreenHeader title={strings.CONTRACT_HEADER_TITLE} />
+
+      {showCoach && onDismissCoach ? <CoachCard onDismiss={onDismissCoach} /> : null}
 
       <Card folderTab={strings.CONTRACT_TAB} dossier>
         <Stack gap={7}>
@@ -67,21 +84,38 @@ export const ContractView = ({
             <Text variant="label" muted>
               {strings.CONTRACT_DIRECTIVE}
             </Text>
-            <Text variant="bodyInput" style={styles.directive}>
+            <Text variant="directive" style={styles.directive}>
               {player.taskDescription}
             </Text>
-            {showSwap ? (
+            {budgetEnabled ? (
               <Stack gap={3} style={styles.swapAction}>
                 <Button
-                  title={strings.CONTRACT_SWAP_DIRECTIVE}
-                  onPress={onScramble}
+                  title={strings.CONTRACT_SWAP_MISSION}
+                  onPress={onSwap}
                   variant="ghost"
                   fullWidth
-                  disabled={!canShuffle || loading}
+                  leftIcon={swapIcon}
+                  disabled={!canSwap}
                   loading={loading}
                 />
-                <Text variant="labelMicro" muted style={styles.swapHint}>
-                  {dynamicStrings.objectiveSwapsLeft(rerollsLeft)}
+                {isInfinite && onSwapTarget ? (
+                  <Button
+                    title={strings.CONTRACT_SWAP_TARGET}
+                    onPress={onSwapTarget}
+                    variant="ghost"
+                    fullWidth
+                    leftIcon={swapIcon}
+                    disabled={!canSwapTarget}
+                    loading={loading}
+                  />
+                ) : null}
+                <Text variant="labelMicro" muted style={styles.hint}>
+                  {strings.CONTRACT_SWAP_HINT}
+                </Text>
+                <Text variant="labelMicro" muted style={styles.hint}>
+                  {rerollsLeft > 0
+                    ? dynamicStrings.swapsLeftThisGame(rerollsLeft)
+                    : strings.NO_MORE_SWAPS}
                 </Text>
               </Stack>
             ) : null}
@@ -96,13 +130,19 @@ export const ContractView = ({
               </Text>
             </View>
           ) : (
-            <HoldToConfirm
-              onConfirm={onLogKill}
-              label={strings.CONTRACT_HOLD_TO_NEUTRALIZE}
-              helperText=""
-              loading={loading}
-              disabled={loading}
-            />
+            <Stack gap={3}>
+              <Button
+                title={strings.CONTRACT_NEUTRALIZE_TARGET}
+                onPress={onLogKill}
+                variant="danger"
+                fullWidth
+                loading={loading}
+                disabled={loading}
+              />
+              <Text variant="labelMicro" muted style={styles.hint}>
+                {strings.CONTRACT_NEUTRALIZE_HINT}
+              </Text>
+            </Stack>
           )}
         </Stack>
       </Card>
@@ -119,14 +159,11 @@ const styles = StyleSheet.create({
   },
   directive: {
     marginTop: space[4],
-    fontFamily: fontFamily.sansSemibold,
-    fontWeight: '600',
-    lineHeight: 28,
   },
   swapAction: {
     marginTop: space[6],
   },
-  swapHint: {
+  hint: {
     textAlign: 'center',
   },
   pendingPanel: {

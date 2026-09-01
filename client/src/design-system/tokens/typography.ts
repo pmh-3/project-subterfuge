@@ -5,9 +5,9 @@ export function tracking(fontSize: number, em: number): number {
   return fontSize * em;
 }
 
-/** Special Elite renders too thin on Android at 7–8px */
+/** Special Elite renders too thin on Android below ~10px */
 export function typewriterSize(size: number): number {
-  return Platform.select({ android: Math.max(size, 9), default: size }) ?? size;
+  return Platform.select({ android: Math.max(size, 10), default: size }) ?? size;
 }
 
 export const fontFamily = {
@@ -34,6 +34,7 @@ export type TextVariant =
   | 'codeSmall'
   | 'codeMicro'
   | 'bodyInput'
+  | 'directive'
   | 'body'
   | 'bodySmall'
   | 'buttonLarge'
@@ -103,12 +104,12 @@ export const textVariants: Record<TextVariant, VariantStyle> = {
   },
   codeSmall: {
     fontFamily: fontFamily.mono,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '400',
   },
   codeMicro: {
     fontFamily: fontFamily.mono,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '400',
   },
   bodyInput: {
@@ -117,47 +118,54 @@ export const textVariants: Record<TextVariant, VariantStyle> = {
     fontWeight: '300',
     letterSpacing: tracking(18, 0.02),
   },
+  directive: {
+    fontFamily: fontFamily.sansSemibold,
+    fontSize: 21,
+    fontWeight: '600',
+    letterSpacing: tracking(21, 0.01),
+    lineHeight: 21 * 1.35,
+  },
   body: {
     fontFamily: fontFamily.sansMedium,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
-    lineHeight: 14 * 1.6,
+    lineHeight: 16 * 1.6,
   },
   bodySmall: {
     fontFamily: fontFamily.sansMedium,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
-    lineHeight: 12 * 1.7,
+    lineHeight: 14 * 1.7,
   },
   buttonLarge: {
     fontFamily: fontFamily.sansSemibold,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: tracking(12, 0.1),
+    letterSpacing: tracking(14, 0.1),
     textTransform: 'uppercase',
   },
   buttonSmall: {
     fontFamily: fontFamily.sansSemibold,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
-    letterSpacing: tracking(11, 0.1),
+    letterSpacing: tracking(13, 0.1),
     textTransform: 'uppercase',
   },
   buttonGhost: {
     fontFamily: fontFamily.sansMedium,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
-    letterSpacing: tracking(12, 0.08),
+    letterSpacing: tracking(14, 0.08),
     textTransform: 'uppercase',
   },
-  label: labelBase(8, 0.22),
-  labelLarge: labelBase(8, 0.28),
-  labelMicro: labelBase(7, 0.12),
+  label: labelBase(12, 0.20),
+  labelLarge: labelBase(12, 0.26),
+  labelMicro: labelBase(11, 0.12),
   metaMicro: {
     fontFamily: fontFamily.typewriter,
-    fontSize: typewriterSize(10),
+    fontSize: typewriterSize(12),
     fontWeight: '400',
-    letterSpacing: tracking(typewriterSize(10), 0.2),
+    letterSpacing: tracking(typewriterSize(12), 0.2),
     textTransform: 'uppercase',
   },
 };

@@ -8,7 +8,6 @@ import {
   AgentRow,
   GameCodeTag,
   Button,
-  HoldToConfirm,
   colors,
   space,
 } from '@/design-system';
@@ -75,14 +74,9 @@ export function GameLobbyView({
                 variant="ghost"
                 style={styles.hostCtaButton}
               />
-              <HoldToConfirm
-                variant="primary"
-                compact
-                showSuccessState={false}
-                label={strings.GAME_HOLD_TO_START}
-                holdingLabel={strings.GAME_HOLD_TO_START_HOLDING}
-                loadingLabel={strings.GAME_STARTING}
-                onConfirm={onStart}
+              <Button
+                title={strings.GAME_BEGIN_OPERATION}
+                onPress={onStart}
                 disabled={!canStartGame}
                 loading={startLoading}
                 style={styles.hostCtaButton}

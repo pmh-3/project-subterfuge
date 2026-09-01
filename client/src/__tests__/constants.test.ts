@@ -3,8 +3,6 @@ import {
   DEFAULT_AVATAR_ID,
   DEFAULT_MAX_REROLLS,
   MIN_PLAYERS_TO_START,
-  HOLD_DURATION,
-  HOLD_RESET_DURATION,
   PULSE_DURATION,
   SPECTATOR_CHECK_DELAY,
   VICTORY_TYPING_INTERVAL,
@@ -28,8 +26,6 @@ describe('constants', () => {
 
   it('animation durations are positive numbers', () => {
     const durations = [
-      HOLD_DURATION,
-      HOLD_RESET_DURATION,
       PULSE_DURATION,
       SPECTATOR_CHECK_DELAY,
       VICTORY_TYPING_INTERVAL,

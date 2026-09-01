@@ -34,7 +34,11 @@ export function NavBar({ tabs, activeKey, onTabPress, style }: NavBarProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
           >
-            <Text variant="label" color={active ? colors.accent : colors.inkMuted}>
+            <Text
+              variant="label"
+              color={active ? colors.accent : colors.inkMuted}
+              maxFontSizeMultiplier={1.4}
+            >
               {tab.label}
             </Text>
           </Pressable>

@@ -3,7 +3,10 @@ import {
   buildTargetChain,
   detectWin,
   computeEliminationUpdates,
+  buildPendingRows,
+  hasCallerClaimOnTarget,
 } from '@/features/game/gameLogic';
+import { Player } from '@/types';
 
 describe('shufflePlayers', () => {
   it('returns the same array reference', () => {
@@ -111,5 +114,128 @@ describe('computeEliminationUpdates', () => {
       targetData, 'assassin', 2, 'ADMIN', false,
     );
     expect(assassinUpdate.killCount).toBeUndefined();
+  });
+});
+
+describe('buildPendingRows (D7 — Pending Confirmations panel)', () => {
+  const mkPlayer = (overrides: Partial<Player> & Pick<Player, 'uid' | 'callsign'>): Player => ({
+    status: 'ALIVE',
+    ...overrides,
+  });
+
+  it('flattens every player queue into assassin -> target rows', () => {
+    const players: Player[] = [
+      mkPlayer({
+        uid: 'target-1',
+        callsign: 'Bravo',
+        pendingEliminations: [
+          { assassinId: 'a1', assassinCallsign: 'Alpha', taskDescription: 'Say hi', claimedAt: 200 },
+        ],
+      }),
+      mkPlayer({ uid: 'target-2', callsign: 'Charlie' }),
+    ];
+
+    const rows = buildPendingRows(players);
+
+    expect(rows).toEqual([
+      {
+        targetId: 'target-1',
+        targetCallsign: 'Bravo',
+        assassinId: 'a1',
+        assassinCallsign: 'Alpha',
+        taskDescription: 'Say hi',
+        claimedAt: 200,
+      },
+    ]);
+  });
+
+  it('preserves every stacked claim on a shared target and sorts the global list by claimedAt', () => {
+    const players: Player[] = [
+      mkPlayer({
+        uid: 'shared-target',
+        callsign: 'Delta',
+        pendingEliminations: [
+          { assassinId: 'a2', assassinCallsign: 'Bravo', taskDescription: 'Second claim', claimedAt: 500 },
+          { assassinId: 'a1', assassinCallsign: 'Alpha', taskDescription: 'First claim', claimedAt: 100 },
+        ],
+      }),
+      mkPlayer({
+        uid: 'other-target',
+        callsign: 'Echo',
+        pendingEliminations: [
+          { assassinId: 'a3', assassinCallsign: 'Charlie', taskDescription: 'Third claim', claimedAt: 300 },
+        ],
+      }),
+    ];
+
+    const rows = buildPendingRows(players);
+
+    expect(rows.map((r) => r.assassinId)).toEqual(['a1', 'a3', 'a2']);
+    expect(rows).toHaveLength(3);
+  });
+
+  it('returns an empty list when no player has a pending claim', () => {
+    const players: Player[] = [mkPlayer({ uid: 'p1', callsign: 'Alpha' })];
+    expect(buildPendingRows(players)).toEqual([]);
+  });
+});
+
+describe('hasCallerClaimOnTarget (Contract view scoping — shared-target co-hunters)', () => {
+  it('is false when the target has no pending claims at all', () => {
+    expect(hasCallerClaimOnTarget({ pendingEliminations: [] }, 'me')).toBe(false);
+    expect(hasCallerClaimOnTarget({ pendingEliminations: undefined }, 'me')).toBe(false);
+  });
+
+  it('is true when the caller has an outstanding claim on the target', () => {
+    const target = {
+      pendingEliminations: [
+        { assassinId: 'me', assassinCallsign: 'Me', taskDescription: 'x', claimedAt: 1 },
+      ],
+    };
+    expect(hasCallerClaimOnTarget(target, 'me')).toBe(true);
+  });
+
+  it('is false for a co-hunter who has NOT claimed the shared target, even though someone else has', () => {
+    // Shared-target scenario (D5): both 'me' and 'co-hunter' hunt the same agent, but only
+    // 'me' has claimed. The co-hunter must not be frozen out of Catch/Swap by my claim.
+    const target = {
+      pendingEliminations: [
+        { assassinId: 'me', assassinCallsign: 'Me', taskDescription: 'x', claimedAt: 1 },
+      ],
+    };
+    expect(hasCallerClaimOnTarget(target, 'co-hunter')).toBe(false);
+  });
+
+  it('is true for each caller independently once both have claimed the shared target', () => {
+    const target = {
+      pendingEliminations: [
+        { assassinId: 'me', assassinCallsign: 'Me', taskDescription: 'x', claimedAt: 1 },
+        { assassinId: 'co-hunter', assassinCallsign: 'Co', taskDescription: 'y', claimedAt: 2 },
+      ],
+    };
+    expect(hasCallerClaimOnTarget(target, 'me')).toBe(true);
+    expect(hasCallerClaimOnTarget(target, 'co-hunter')).toBe(true);
+  });
+
+  it('is false when target is undefined or callerId is undefined', () => {
+    expect(hasCallerClaimOnTarget(undefined, 'me')).toBe(false);
+    expect(
+      hasCallerClaimOnTarget(
+        { pendingEliminations: [{ assassinId: 'me', assassinCallsign: 'Me', taskDescription: 'x', claimedAt: 1 }] },
+        undefined,
+      ),
+    ).toBe(false);
+  });
+
+  it('classic mode: single-hunter queue behaves as a simple boolean for the one hunter', () => {
+    // Classic only ever holds 0 or 1 entry (single hunter per target) — confirm the caller-scoped
+    // check degenerates correctly and is unaffected by the shared-target change.
+    const target = {
+      pendingEliminations: [
+        { assassinId: 'sole-hunter', assassinCallsign: 'Sole', taskDescription: 'x', claimedAt: 1 },
+      ],
+    };
+    expect(hasCallerClaimOnTarget(target, 'sole-hunter')).toBe(true);
+    expect(hasCallerClaimOnTarget(target, 'someone-else')).toBe(false);
   });
 });

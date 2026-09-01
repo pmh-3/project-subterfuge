@@ -106,13 +106,24 @@ export default function ConfigureScreen() {
   const [packs, setPacks] = useState<TaskPack[]>([]);
   const [selectedPackIds, setSelectedPackIds] = useState<string[]>(['basic_training']);
   const [expandedPackId, setExpandedPackId] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState('elimination');
+  // D4: defaults are Infinite + Easy so a fresh doc (no mode/difficulty yet — the
+  // create-flow case) preselects the intended default. Overwritten below (:139-148)
+  // once the loaded doc has explicit values.
+  const [gameMode, setGameMode] = useState('infinite');
   const [killGoal, setKillGoal] = useState(DEFAULT_INFINITE_KILL_GOAL);
   const [customKillGoal, setCustomKillGoal] = useState('');
-  const [difficulty, setDifficulty] = useState<DifficultySetting>('Mixed');
+  const [difficulty, setDifficulty] = useState<DifficultySetting>('Easy');
   const [maxRerolls, setMaxRerolls] = useState<number>(5);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Deep-link guard (D6): configure is a LOBBY-only screen. A host navigating
+  // directly here (bookmark/back/typed URL) while the game is ACTIVE or
+  // COMPLETED must not see the editable form or be able to write — that would
+  // let handleAuthorize revert the game to LOBBY and flip its mode mid-game,
+  // corrupting pending queues / respawn state. `redirecting` keeps the
+  // loading view up while we bounce back to the game screen.
+  const [gameStatus, setGameStatus] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     loadPacks();
@@ -129,6 +140,14 @@ export default function ConfigureScreen() {
 
       if (gameSnap.exists()) {
         const game = parseGameOrThrow(gameSnap.data());
+        setGameStatus(game.status);
+
+        if (game.status !== 'LOBBY') {
+          setRedirecting(true);
+          router.replace(`/game/${gameId}`);
+          return;
+        }
+
         if (game.selectedPacks?.length) {
           setSelectedPackIds(game.selectedPacks);
         } else if (availablePacks.some((p) => p.id === 'basic_training')) {
@@ -145,6 +164,11 @@ export default function ConfigureScreen() {
           if (!INFINITE_KILL_GOAL_OPTIONS.includes(goal as (typeof INFINITE_KILL_GOAL_OPTIONS)[number])) {
             setCustomKillGoal(String(goal));
           }
+        } else if (game.mode === 'CLASSIC') {
+          // Explicit Classic on the loaded doc must win over the component's
+          // Infinite-by-default state (D4) — only a doc with no mode yet (the
+          // fresh create-flow case) should show the default.
+          setGameMode('elimination');
         }
       } else if (availablePacks.some((p) => p.id === 'basic_training')) {
         setSelectedPackIds(['basic_training']);
@@ -177,6 +201,14 @@ export default function ConfigureScreen() {
   };
 
   const handleAuthorize = async () => {
+    if (gameStatus !== 'LOBBY') {
+      // Defense in depth: never write status/mode-reverting fields once the
+      // loaded doc is known to be non-LOBBY, even if the render guard above
+      // were somehow bypassed (e.g. a stale status flip mid-visit).
+      router.replace(`/game/${gameId}`);
+      return;
+    }
+
     if (selectedPackIds.length === 0) {
       showAlert({
         title: strings.CONFIGURE_NO_PACKS_TITLE,
@@ -222,7 +254,7 @@ export default function ConfigureScreen() {
     }
   };
 
-  if (loading) {
+  if (loading || redirecting) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>

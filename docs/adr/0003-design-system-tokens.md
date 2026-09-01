@@ -9,7 +9,7 @@ The original app used a dark "Cold War Bureau" theme with scattered inline color
 Build a dedicated design system at `client/src/design-system/`:
 
 - **Tokens:** `colors`, `space`, `radius`, `typography`, `motion`, `elevation` (always none)
-- **Primitives:** `Button`, `Text`, `Card`, `HoldToConfirm`, `NavBar`, etc.
+- **Primitives:** `Button`, `Text`, `Card`, `NavBar`, etc.
 - **Import path:** `@/design-system` (alias → `client/src/`)
 - **Spec:** `docs/plans/DESIGN_SYSTEM.md`
 

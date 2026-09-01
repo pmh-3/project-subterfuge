@@ -65,8 +65,7 @@ export function computeEliminationUpdates(
 
   const targetUpdate: Record<string, unknown> = {
     status: 'ELIMINATED',
-    pendingEliminationBy: null,
-    pendingTaskDescription: null,
+    pendingEliminations: [],
     eliminatedBy,
     eliminatedAt: Date.now(),
   };
@@ -107,80 +106,42 @@ export function getKillGoal(game: Pick<Game, 'infiniteConfig'>): number {
   return game.infiniteConfig?.endCondition.value ?? DEFAULT_INFINITE_KILL_GOAL;
 }
 
-export function pickChainInsertionAnchor(
-  alivePlayers: Pick<Player, 'uid' | 'targetId'>[],
-  excludeTargetId?: string,
+const pickTask = (tasks: string[], rng: () => number): string =>
+  tasks[Math.floor(rng() * tasks.length)]!;
+
+/**
+ * Picks a fresh independent target for `agentId`: a random ALIVE agent, never
+ * self, and (when possible) never `avoidId` (so a swap/kill actually changes the
+ * target). Falls back to allowing `avoidId` only when it is the sole option.
+ * Throws when no eligible target exists.
+ */
+export function pickIndependentTarget(
+  agentId: string,
+  players: Pick<Player, 'uid' | 'status'>[],
+  avoidId?: string,
   rng: () => number = Math.random,
 ): string {
-  const preferred = excludeTargetId
-    ? alivePlayers.filter((p) => p.targetId !== excludeTargetId)
-    : alivePlayers;
-  const pool = preferred.length > 0 ? preferred : alivePlayers;
-
-  if (pool.length === 0) {
-    throw new Error('No alive players for chain insertion');
+  const alive = players.filter((p) => p.status === 'ALIVE' && p.uid !== agentId);
+  if (alive.length === 0) {
+    throw new Error('No eligible target for agent');
   }
+  const preferred = avoidId ? alive.filter((p) => p.uid !== avoidId) : alive;
+  const pool = preferred.length > 0 ? preferred : alive;
   const idx = Math.floor(rng() * pool.length);
   return pool[idx]!.uid;
 }
 
-export function computeChainInsertionUpdates(
-  insertedPlayer: Pick<Player, 'uid' | 'callsign'>,
-  anchorId: string,
-  allPlayers: Pick<Player, 'uid' | 'callsign' | 'targetId' | 'targetCallsign'>[],
-  tasks: string[],
-  rng: () => number = Math.random,
-): {
-  insertedUpdate: { targetId: string; targetCallsign: string; taskDescription: string };
-  anchorUpdate: { targetId: string; targetCallsign: string };
-} {
-  const anchor = allPlayers.find((p) => p.uid === anchorId);
-  if (!anchor?.targetId || !anchor.targetCallsign) {
-    throw new Error('Invalid anchor for chain insertion');
-  }
-
-  const insertedTargetsAnchor = anchor.targetId === insertedPlayer.uid;
-  const insertedTargetId = insertedTargetsAnchor ? anchor.uid : anchor.targetId;
-  const insertedTarget = allPlayers.find((p) => p.uid === insertedTargetId);
-
-  return {
-    insertedUpdate: {
-      targetId: insertedTargetId,
-      targetCallsign: insertedTargetsAnchor
-        ? anchor.callsign
-        : (insertedTarget?.callsign ?? anchor.targetCallsign),
-      taskDescription: tasks[Math.floor(rng() * tasks.length)]!,
-    },
-    anchorUpdate: {
-      targetId: insertedPlayer.uid,
-      targetCallsign: insertedPlayer.callsign,
-    },
-  };
-}
-
-export function resolveAssassinTargetAfterKill(
-  victimTargetId: string,
-  assassinId: string,
-  alivePlayers: Pick<Player, 'uid' | 'callsign' | 'status'>[],
-  rng: () => number = Math.random,
-): { targetId: string; targetCallsign: string } {
-  if (victimTargetId !== assassinId) {
-    const target = alivePlayers.find((p) => p.uid === victimTargetId && p.status === 'ALIVE');
-    if (target) {
-      return { targetId: victimTargetId, targetCallsign: target.callsign };
-    }
-  }
-
-  const eligible = alivePlayers.filter((p) => p.uid !== assassinId && p.status === 'ALIVE');
-  if (eligible.length === 0) {
-    throw new Error('No eligible target for assassin');
-  }
-  const picked = eligible[Math.floor(rng() * eligible.length)]!;
-  return { targetId: picked.uid, targetCallsign: picked.callsign };
-}
-
-export function computeInstantInfiniteElimination(
-  victim: Player,
+/**
+ * Kill resolution for infinite (Option E). The victim respawns instantly and
+ * keeps their own target (no surprise); the assassin gets a FRESH random target
+ * (never the victim when another option exists) plus a FRESH directive (never
+ * inherited — closes the #12 information leak). No anchor, no bystander writes.
+ *
+ * The returned updates deliberately do NOT touch `pendingEliminations`; the
+ * service removes only the resolved queue entry so stacked claims are preserved.
+ */
+export function computeIndependentKill(
+  victim: Pick<Player, 'uid' | 'callsign' | 'respawnCount'>,
   assassinId: string,
   assassinKillCount: number,
   allPlayers: Player[],
@@ -191,69 +152,147 @@ export function computeInstantInfiniteElimination(
 ): {
   victimUpdate: Record<string, unknown>;
   assassinUpdate: Record<string, unknown>;
-  anchorUpdate: Record<string, unknown>;
-  anchorId: string;
 } {
-  const victimPreTargetId = victim.targetId!;
-  const victimPreTask = victim.taskDescription!;
-
-  const aliveExceptVictim = allPlayers.filter((p) => p.status === 'ALIVE' && p.uid !== victim.uid);
-  const anchorId = pickChainInsertionAnchor(aliveExceptVictim, victim.uid, rng);
-  const { insertedUpdate, anchorUpdate } = computeChainInsertionUpdates(
-    victim,
-    anchorId,
-    allPlayers,
-    tasks,
-    rng,
-  );
-
-  const assassinTarget = resolveAssassinTargetAfterKill(
-    victimPreTargetId,
-    assassinId,
-    allPlayers.filter((p) => p.status === 'ALIVE'),
-    rng,
-  );
-
   const victimUpdate: Record<string, unknown> = {
     status: 'ALIVE',
-    pendingEliminationBy: null,
-    pendingTaskDescription: null,
+    respawnCount: (victim.respawnCount || 0) + 1,
+    taskDescription: pickTask(tasks, rng),
     eliminatedBy,
     eliminatedAt: Date.now(),
-    respawnCount: (victim.respawnCount || 0) + 1,
-    ...insertedUpdate,
+    // targetId intentionally omitted: the victim keeps their existing target.
   };
 
+  // If the victim's kept target is no longer valid (target left the game),
+  // reassign so the invariant still holds after respawn.
+  const victimRecord = allPlayers.find((p) => p.uid === victim.uid);
+  const aliveIds = new Set(
+    allPlayers.filter((p) => p.status === 'ALIVE').map((p) => p.uid),
+  );
+  const keptTargetId = victimRecord?.targetId;
+  const keptTargetValid =
+    !!keptTargetId && keptTargetId !== victim.uid && aliveIds.has(keptTargetId);
+  if (!keptTargetValid) {
+    const newTargetId = pickIndependentTarget(victim.uid, allPlayers, undefined, rng);
+    victimUpdate.targetId = newTargetId;
+    victimUpdate.targetCallsign =
+      allPlayers.find((p) => p.uid === newTargetId)?.callsign ?? '';
+  }
+
+  const assassinTargetId = pickIndependentTarget(assassinId, allPlayers, victim.uid, rng);
+  const assassinTarget = allPlayers.find((p) => p.uid === assassinTargetId);
+
   const assassinUpdate: Record<string, unknown> = {
-    targetId: assassinTarget.targetId,
-    targetCallsign: assassinTarget.targetCallsign,
-    taskDescription: victimPreTask,
+    targetId: assassinTargetId,
+    targetCallsign: assassinTarget?.callsign ?? '',
+    taskDescription: pickTask(tasks, rng),
     ...(incrementKillCount && { killCount: assassinKillCount + 1 }),
   };
 
-  return { victimUpdate, assassinUpdate, anchorUpdate, anchorId };
+  return { victimUpdate, assassinUpdate };
 }
 
-export function computeMidGameJoinUpdates(
-  newPlayer: Pick<Player, 'uid' | 'callsign'>,
-  allPlayers: Player[],
+/**
+ * Fresh assignment for a brand-new (mid-game join) or reset agent. Picks a
+ * random ALIVE target and a random directive. Touches no other player.
+ */
+export function computeIndependentJoin(
+  newAgentId: string,
+  players: Player[],
   tasks: string[],
   rng: () => number = Math.random,
-): {
-  newPlayerFields: { targetId: string; targetCallsign: string; taskDescription: string };
-  anchorUpdate: { targetId: string; targetCallsign: string };
-  anchorId: string;
-} {
-  const alivePlayers = allPlayers.filter((p) => p.status === 'ALIVE');
-  const anchorId = pickChainInsertionAnchor(alivePlayers, undefined, rng);
-  const { insertedUpdate, anchorUpdate } = computeChainInsertionUpdates(
-    newPlayer,
-    anchorId,
-    allPlayers,
-    tasks,
-    rng,
+): { targetId: string; targetCallsign: string; taskDescription: string } {
+  const targetId = pickIndependentTarget(newAgentId, players, undefined, rng);
+  const target = players.find((p) => p.uid === targetId);
+  return {
+    targetId,
+    targetCallsign: target?.callsign ?? '',
+    taskDescription: pickTask(tasks, rng),
+  };
+}
+
+/**
+ * A single per-hunter target reassignment produced when a player is force-removed
+ * from an infinite game. `targetId: null` means the hunter has no eligible target
+ * left (e.g. a lone survivor once everyone else is gone) — the round is
+ * effectively over; clear the target rather than aborting.
+ */
+export interface ForceRemoveReassignment {
+  uid: string;
+  targetId: string | null;
+  targetCallsign: string | null;
+}
+
+/**
+ * Computes the target reassignments needed when `removedId` leaves an infinite
+ * game (host force-remove). Every ALIVE agent that was hunting the removed player
+ * gets a fresh target; no other agent is touched. Gracefully handles the
+ * no-eligible-target case (returns `targetId: null`) instead of throwing, so the
+ * removal transaction never aborts at small player counts (e.g. N=2).
+ */
+export function computeForceRemoveReassignments(
+  removedId: string,
+  players: Pick<Player, 'uid' | 'callsign' | 'status' | 'targetId'>[],
+  rng: () => number = Math.random,
+): ForceRemoveReassignment[] {
+  // State AFTER the removal: the removed player is no longer ALIVE.
+  const playersAfterRemoval = players.map((p) =>
+    p.uid === removedId ? { ...p, status: 'ELIMINATED' as const } : p,
   );
-  return { newPlayerFields: insertedUpdate, anchorUpdate, anchorId };
+
+  const reassignments: ForceRemoveReassignment[] = [];
+  for (const player of players) {
+    if (player.uid === removedId) continue;
+    if (player.status !== 'ALIVE') continue;
+    if (player.targetId !== removedId) continue;
+
+    try {
+      const newTargetId = pickIndependentTarget(player.uid, playersAfterRemoval, undefined, rng);
+      const newTarget = playersAfterRemoval.find((p) => p.uid === newTargetId);
+      reassignments.push({
+        uid: player.uid,
+        targetId: newTargetId,
+        targetCallsign: newTarget?.callsign ?? '',
+      });
+    } catch {
+      // No eligible target remains (lone survivor). Clear the target — the round
+      // is effectively over — rather than aborting the whole removal.
+      reassignments.push({ uid: player.uid, targetId: null, targetCallsign: null });
+    }
+  }
+  return reassignments;
+}
+
+/**
+ * Infinite-mode integrity check (replaces the Hamiltonian walk for infinite).
+ * Every ALIVE agent must have a target that is a distinct, existing ALIVE agent.
+ * In-degree is unconstrained — shared targets are allowed.
+ */
+export function validateIndependentTargets(
+  players: Pick<Player, 'uid' | 'targetId' | 'status'>[],
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const alive = players.filter((p) => p.status === 'ALIVE');
+
+  if (alive.length === 0) {
+    return { valid: true, errors };
+  }
+
+  const aliveIds = new Set(alive.map((p) => p.uid));
+
+  for (const player of alive) {
+    if (!player.targetId) {
+      errors.push(`${player.uid} has no target`);
+      continue;
+    }
+    if (player.targetId === player.uid) {
+      errors.push(`${player.uid} targets self`);
+    }
+    if (!aliveIds.has(player.targetId)) {
+      errors.push(`${player.uid} targets non-alive player ${player.targetId}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 
 export function isGameOver(
@@ -270,9 +309,7 @@ export function isGameOver(
   }
 
   const goal = getKillGoal(game);
-  const inPlay = players.filter(
-    (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION',
-  );
+  const inPlay = players.filter((p) => p.status === 'ALIVE');
   const atGoal = inPlay.filter((p) => (p.killCount || 0) >= goal);
 
   if (atGoal.length === 1) {
@@ -338,10 +375,73 @@ export function validateAliveTargetChain(
   return { valid: errors.length === 0, errors };
 }
 
-export function sortPlayersByLeaderboard(players: Player[]): Player[] {
+/**
+ * Times-eliminated count for a player, mode-aware (D8). Infinite mode has no
+ * single-life status — a player respawns instantly on each kill, so their death
+ * count is the running `respawnCount`. Classic is single-life: exactly 1 once
+ * `ELIMINATED`, 0 otherwise.
+ */
+export function getDeathCount(
+  player: Pick<Player, 'respawnCount' | 'status'>,
+  isInfinite: boolean,
+): number {
+  return isInfinite ? player.respawnCount || 0 : player.status === 'ELIMINATED' ? 1 : 0;
+}
+
+export function sortPlayersByLeaderboard(players: Player[], isInfinite = true): Player[] {
   return [...players].sort((a, b) => {
     const killDiff = (b.killCount || 0) - (a.killCount || 0);
     if (killDiff !== 0) return killDiff;
+    const deathDiff = getDeathCount(a, isInfinite) - getDeathCount(b, isInfinite);
+    if (deathDiff !== 0) return deathDiff;
     return a.callsign.localeCompare(b.callsign);
   });
+}
+
+/** A single flattened row for the Host tab's Pending Confirmations panel (D7). */
+export interface PendingRow {
+  targetId: string;
+  targetCallsign: string;
+  assassinId: string;
+  assassinCallsign: string;
+  taskDescription: string;
+  claimedAt: number;
+}
+
+/**
+ * True only if `callerId` personally has an outstanding claim against `target`.
+ *
+ * Shared targets (D5) mean a target's `pendingEliminations` queue can hold claims from
+ * several different agents at once. The Contract view's "awaiting confirmation" panel must
+ * freeze only the agent who actually made the claim — a co-hunter who has *not* claimed the
+ * same shared target yet must still be able to tap Catch and use their swap controls. Scoping
+ * to the caller (rather than "does the target have any pending claim at all") is what makes
+ * that possible.
+ */
+export function hasCallerClaimOnTarget(
+  target: Pick<Player, 'pendingEliminations'> | undefined,
+  callerId: string | undefined,
+): boolean {
+  if (!callerId) return false;
+  return (target?.pendingEliminations ?? []).some((e) => e.assassinId === callerId);
+}
+
+/**
+ * Flatten every player's `pendingEliminations[]` queue into a single global,
+ * FIFO-ordered list for the host panel: "assassin → target : mission". Pure —
+ * no Firebase, so it is trivially unit-testable and reusable from any caller.
+ */
+export function buildPendingRows(players: Player[]): PendingRow[] {
+  return players
+    .flatMap((p) =>
+      (p.pendingEliminations ?? []).map((e) => ({
+        targetId: p.uid,
+        targetCallsign: p.callsign,
+        assassinId: e.assassinId,
+        assassinCallsign: e.assassinCallsign,
+        taskDescription: e.taskDescription,
+        claimedAt: e.claimedAt,
+      })),
+    )
+    .sort((a, b) => a.claimedAt - b.claimedAt);
 }

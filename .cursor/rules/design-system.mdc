@@ -20,7 +20,7 @@ globs: client/app/**,client/src/**
 
 ## Primitives
 
-`Button`, `IconButton`, `Input`, `Card`, `Rule`, `Stack`, `Row`, `Text`, `Divider`, `Badge`, `Sheet`/`Modal`, `Alert`, `Avatar`, `ScreenHeader`, `NavBar`, `AgentRow`, `SegmentChips`, `PillSegments`, `HoldToConfirm`
+`Button`, `IconButton`, `Input`, `Card`, `Rule`, `Stack`, `Row`, `Text`, `Divider`, `Badge`, `Sheet`/`Modal`, `Alert`, `Avatar`, `ScreenHeader`, `NavBar`, `AgentRow`, `SegmentChips`, `PillSegments`
 
 Gallery (dev): `/_dev/gallery`
 

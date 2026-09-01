@@ -1,20 +1,28 @@
 import { db } from '@/services/firebase';
 import { doc, setDoc, getDoc, updateDoc, arrayUnion, collection, writeBatch, getDocs, runTransaction, query, where, arrayRemove } from 'firebase/firestore';
-import { Game, Player } from '@/types';
+import { Game, Player, PendingElimination } from '@/types';
 import { parseGameOrThrow, parsePlayerOrThrow } from '@/types/firestoreParse';
 import { generateGameCode } from '@/utils/gameUtils';
 import { TASKS } from '@/data/tasks';
 import { getTasksFromPacks } from '@/features/tasks/taskService';
 import { DifficultySetting } from '@/types/taskPack';
-import { DEFAULT_AVATAR_ID, DEFAULT_MAX_REROLLS, MIN_PLAYERS_TO_START, MAX_PLAYERS } from '@/constants';
+import {
+  DEFAULT_AVATAR_ID,
+  DEFAULT_MAX_REROLLS,
+  DEFAULT_INFINITE_KILL_GOAL,
+  MIN_PLAYERS_TO_START,
+  MAX_PLAYERS,
+} from '@/constants';
 import {
   shufflePlayers,
   buildTargetChain,
   computeEliminationUpdates,
   isClassicMode,
   isInfiniteMode,
-  computeInstantInfiniteElimination,
-  computeMidGameJoinUpdates,
+  computeIndependentKill,
+  computeIndependentJoin,
+  computeForceRemoveReassignments,
+  pickIndependentTarget,
   isGameOver,
 } from '@/features/game/gameLogic';
 import { serviceErrors } from '@/strings';
@@ -38,7 +46,9 @@ export const createGame = async (hostId: string, hostCallsign: string, pin: stri
   const gameId = generateGameCode();
   const gameRef = doc(db, 'games', gameId);
   
-  // Create Game Doc
+  // Create Game Doc. Defaults to Infinite (D4) so any bypass of the configure
+  // screen (deep link, test, future caller) never yields a silent-Classic game.
+  // configure.tsx's handleAuthorize overwrites all of these when the host saves.
   const newGame: Game = {
     id: gameId,
     hostId,
@@ -46,8 +56,10 @@ export const createGame = async (hostId: string, hostCallsign: string, pin: stri
     playerIds: [hostId],
     createdAt: Date.now(),
     selectedPacks: ['basic_training'],
-    difficultySetting: 'Mixed',
+    difficultySetting: 'Easy',
     maxRerolls: DEFAULT_MAX_REROLLS,
+    mode: 'INFINITE',
+    infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: DEFAULT_INFINITE_KILL_GOAL } },
   };
   
   await setDoc(gameRef, newGame);
@@ -138,11 +150,9 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
     }
 
     const allPlayers = allPlayerDocs.map((d) => d.data);
-    const { newPlayerFields, anchorUpdate, anchorId } = computeMidGameJoinUpdates(
-      { uid: playerId, callsign: callsign.trim() },
-      allPlayers,
-      availableTasks,
-    );
+    // Option E: the newcomer simply gets a random target + directive. No existing
+    // player's target is disturbed (no anchor/bystander writes).
+    const newPlayerFields = computeIndependentJoin(playerId, allPlayers, availableTasks);
 
     const newPlayerRef = doc(db, 'games', gameId, 'players', playerId);
     transaction.set(newPlayerRef, {
@@ -154,11 +164,10 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
       killCount: 0,
       respawnCount: 0,
       rerollsUsed: 0,
+      pendingEliminations: [],
       ...newPlayerFields,
     });
 
-    const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
-    transaction.update(anchorRef, anchorUpdate);
     transaction.update(gameRef, { playerIds: arrayUnion(playerId) });
   });
 };
@@ -213,36 +222,62 @@ export const challengeTarget = async (gameId: string, targetId: string, assassin
   const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
   const targetRef = doc(db, 'games', gameId, 'players', targetId);
 
-  const [gameSnap, assassinSnap, targetSnap] = await Promise.all([
-    getDoc(gameRef),
-    getDoc(assassinRef),
-    getDoc(targetRef),
-  ]);
+  // Read-modify-write on the target's queue must be transactional so concurrent
+  // assassins do not clobber each other's stacked claims.
+  await runTransaction(db, async (transaction) => {
+    const gameSnap = await transaction.get(gameRef);
+    if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+    const gameData = parseGameOrThrow(gameSnap.data());
+    if (gameData.status !== 'ACTIVE') throw new Error(serviceErrors.OPERATION_ALREADY_IN_PROGRESS);
 
-  if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
-  const gameData = parseGameOrThrow(gameSnap.data());
-  if (gameData.status !== 'ACTIVE') throw new Error(serviceErrors.OPERATION_ALREADY_IN_PROGRESS);
+    const assassinSnap = await transaction.get(assassinRef);
+    const targetSnap = await transaction.get(targetRef);
+    if (!assassinSnap.exists()) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
+    if (!targetSnap.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
 
-  if (!assassinSnap.exists()) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
-  if (!targetSnap.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+    const assassin = parsePlayerOrThrow(assassinSnap.data());
+    const target = parsePlayerOrThrow(targetSnap.data());
 
-  const assassin = parsePlayerOrThrow(assassinSnap.data());
-  const target = parsePlayerOrThrow(targetSnap.data());
+    if (assassin.status !== 'ALIVE') throw new Error(serviceErrors.PLAYER_NOT_ALIVE);
+    if (target.status !== 'ALIVE') throw new Error(serviceErrors.TARGET_NOT_ALIVE);
 
-  if (assassin.status !== 'ALIVE') throw new Error(serviceErrors.PLAYER_NOT_ALIVE);
-  if (target.status !== 'ALIVE') throw new Error(serviceErrors.TARGET_NOT_ALIVE);
+    const queue = target.pendingEliminations ?? [];
+    // Dedupe: ignore a double-tap from the same assassin.
+    if (queue.some((e) => e.assassinId === assassinId)) return;
 
-  await updateDoc(targetRef, {
-    pendingEliminationBy: assassinId,
-    ...(assassin.taskDescription != null && { pendingTaskDescription: assassin.taskDescription }),
+    const entry: PendingElimination = {
+      assassinId,
+      assassinCallsign: assassin.callsign,
+      taskDescription: assassin.taskDescription ?? '',
+      claimedAt: Date.now(),
+    };
+
+    transaction.update(targetRef, { pendingEliminations: [...queue, entry] });
   });
 };
 
-export const denyElimination = async (gameId: string, targetId: string) => {
+/**
+ * Drop one queued claim without crediting anyone. Resolves the head of the queue
+ * (victim's own screen) or a specific entry when `assassinId` is given (host panel).
+ * Other queued entries remain.
+ */
+export const denyElimination = async (gameId: string, targetId: string, assassinId?: string) => {
   const targetRef = doc(db, 'games', gameId, 'players', targetId);
-  await updateDoc(targetRef, {
-    pendingEliminationBy: null,
-    pendingTaskDescription: null
+
+  await runTransaction(db, async (transaction) => {
+    const targetSnap = await transaction.get(targetRef);
+    if (!targetSnap.exists()) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+    const target = parsePlayerOrThrow(targetSnap.data());
+
+    const queue = target.pendingEliminations ?? [];
+    if (queue.length === 0) throw new Error(serviceErrors.NO_PENDING_ELIMINATION);
+
+    const entry = assassinId ? queue.find((e) => e.assassinId === assassinId) : queue[0];
+    if (!entry) throw new Error(serviceErrors.NO_PENDING_ELIMINATION);
+
+    transaction.update(targetRef, {
+      pendingEliminations: queue.filter((e) => e !== entry),
+    });
   });
 };
 
@@ -301,9 +336,10 @@ const applyInfiniteElimination = (
   tasks: string[],
   eliminatedBy: string,
   incrementKillCount: boolean,
+  remainingQueue: PendingElimination[],
 ) => {
   const allPlayers = allPlayerDocs.map((d) => d.data);
-  const { victimUpdate, assassinUpdate, anchorUpdate, anchorId } = computeInstantInfiniteElimination(
+  const { victimUpdate, assassinUpdate } = computeIndependentKill(
     targetData,
     assassinId,
     assassinKillCount,
@@ -313,11 +349,9 @@ const applyInfiniteElimination = (
     incrementKillCount,
   );
 
-  transaction.update(targetRef, victimUpdate);
+  // Remove only the resolved entry; stacked claims from other assassins remain.
+  transaction.update(targetRef, { ...victimUpdate, pendingEliminations: remainingQueue });
   transaction.update(assassinRef, assassinUpdate);
-
-  const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
-  transaction.update(anchorRef, anchorUpdate);
 
   const playersAfter = allPlayers.map((p) => {
     if (p.uid === targetData.uid) return { ...p, ...victimUpdate, status: 'ALIVE' as const };
@@ -328,7 +362,6 @@ const applyInfiniteElimination = (
         killCount: incrementKillCount ? assassinKillCount + 1 : p.killCount,
       };
     }
-    if (p.uid === anchorId) return { ...p, ...anchorUpdate };
     return p;
   });
 
@@ -345,21 +378,23 @@ const applyInfiniteElimination = (
           targetId: null,
           targetCallsign: null,
           taskDescription: 'VICTORY ACHIEVED',
-          pendingEliminationBy: null,
-          pendingTaskDescription: null,
+          pendingEliminations: [],
         });
       } else {
         transaction.update(pRef, {
           status: 'ELIMINATED',
-          pendingEliminationBy: null,
-          pendingTaskDescription: null,
+          pendingEliminations: [],
         });
       }
     }
   }
 };
 
-export const confirmElimination = async (gameId: string, targetId: string) => {
+export const confirmElimination = async (
+  gameId: string,
+  targetId: string,
+  assassinId?: string,
+) => {
   const gameRef = doc(db, 'games', gameId);
   const gameSnap = await getDoc(gameRef);
   if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
@@ -377,24 +412,32 @@ export const confirmElimination = async (gameId: string, targetId: string) => {
     const targetData = targetEntry.data;
     const targetRef = doc(db, 'games', gameId, 'players', targetId);
 
-    const assassinId = targetData.pendingEliminationBy;
-    if (!assassinId) throw new Error(serviceErrors.NO_PENDING_ELIMINATION);
+    // Select the queued claim: a specific assassin's entry (host panel) or the
+    // FIFO head (victim's own screen).
+    const queue = targetData.pendingEliminations ?? [];
+    const pending = assassinId
+      ? queue.find((e) => e.assassinId === assassinId)
+      : queue[0];
+    if (!pending) throw new Error(serviceErrors.NO_PENDING_ELIMINATION);
+    const resolvedAssassinId = pending.assassinId;
+    const remainingQueue = queue.filter((e) => e !== pending);
 
-    const assassinEntry = allPlayerDocs.find((p) => p.id === assassinId);
+    const assassinEntry = allPlayerDocs.find((p) => p.id === resolvedAssassinId);
     if (!assassinEntry) throw new Error(serviceErrors.ASSASSIN_NOT_FOUND);
     const assassinData = assassinEntry.data;
-    const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
+    const assassinRef = doc(db, 'games', gameId, 'players', resolvedAssassinId);
 
     if (isClassicMode(game)) {
+      // Classic holds at most one entry; applyClassicElimination clears the queue.
       applyClassicElimination(
         transaction,
         gameId,
         targetRef,
         targetData,
-        assassinId,
+        resolvedAssassinId,
         assassinRef,
         assassinData.killCount || 0,
-        assassinId,
+        resolvedAssassinId,
         true,
       );
     } else {
@@ -404,73 +447,82 @@ export const confirmElimination = async (gameId: string, targetId: string) => {
         game,
         targetRef,
         targetData,
-        assassinId,
+        resolvedAssassinId,
         assassinRef,
         assassinData.killCount || 0,
         allPlayerDocs,
         availableTasks,
-        assassinId,
+        resolvedAssassinId,
         true,
+        remainingQueue,
       );
     }
   });
 };
 
+/**
+ * Host "remove without credit" action (D7 / §4g). This is a permanent removal,
+ * NOT a kill:
+ * - Infinite: the target is marked ELIMINATED permanently (no respawn), their
+ *   pending queue is cleared, and every agent who was hunting them is reassigned
+ *   a fresh target via pickIndependentTarget (a legitimate, visible change — the
+ *   target left the game). Crediting a real catch instead is a separate action:
+ *   call confirmElimination(gameId, targetId, assassinId).
+ * - Classic: unchanged — the target's hunter inherits (no kill credit).
+ */
 export const adminForceEliminate = async (gameId: string, targetId: string) => {
   const gameRef = doc(db, 'games', gameId);
   const gameSnap = await getDoc(gameRef);
   if (!gameSnap.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
   const game = parseGameOrThrow(gameSnap.data());
-  const availableTasks = await resolveAvailableTasks(game);
 
+  if (isInfiniteMode(game)) {
+    await runTransaction(db, async (transaction) => {
+      const gameDoc = await transaction.get(gameRef);
+      const freshGame = parseGameOrThrow(gameDoc.data());
+      const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, freshGame.playerIds);
+
+      const targetEntry = allPlayerDocs.find((p) => p.id === targetId);
+      if (!targetEntry) throw new Error(serviceErrors.TARGET_NOT_FOUND);
+      const targetRef = doc(db, 'games', gameId, 'players', targetId);
+
+      // Permanent removal — no respawn.
+      transaction.update(targetRef, {
+        status: 'ELIMINATED',
+        eliminatedBy: 'ADMIN',
+        eliminatedAt: Date.now(),
+        pendingEliminations: [],
+      });
+
+      // Reassign every ALIVE agent who was targeting the removed player. The pure
+      // helper handles the no-eligible-target case (lone survivor at N=2) by
+      // clearing the target instead of throwing, so the removal never aborts.
+      const reassignments = computeForceRemoveReassignments(
+        targetId,
+        allPlayerDocs.map((d) => d.data),
+      );
+      for (const { uid, targetId: newTargetId, targetCallsign } of reassignments) {
+        const pRef = doc(db, 'games', gameId, 'players', uid);
+        transaction.update(pRef, { targetId: newTargetId, targetCallsign });
+      }
+    });
+    return;
+  }
+
+  // --- Classic mode (unchanged) ---
   const playersRef = collection(db, 'games', gameId, 'players');
   const snapshot = await getDocs(playersRef);
   const players = snapshot.docs.map((d) => parsePlayerOrThrow(d.data()));
 
-  const assassin = players.find(
-    (p) => p.targetId === targetId && (p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION'),
-  );
+  const assassin = players.find((p) => p.targetId === targetId && p.status === 'ALIVE');
 
   if (!assassin) {
     const targetRef = doc(db, 'games', gameId, 'players', targetId);
-    if (isInfiniteMode(game)) {
-      await runTransaction(db, async (transaction) => {
-        const gameDoc = await transaction.get(gameRef);
-        const freshGame = parseGameOrThrow(gameDoc.data());
-        const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, freshGame.playerIds);
-        const targetEntry = allPlayerDocs.find((p) => p.id === targetId);
-        if (!targetEntry) throw new Error(serviceErrors.TARGET_NOT_FOUND);
-        const targetData = targetEntry.data;
-
-        const aliveExceptVictim = allPlayerDocs
-          .map((d) => d.data)
-          .filter((p) => p.status === 'ALIVE' && p.uid !== targetId);
-        if (aliveExceptVictim.length === 0) return;
-
-        const { newPlayerFields, anchorUpdate, anchorId } = computeMidGameJoinUpdates(
-          targetData,
-          allPlayerDocs.map((d) => d.data),
-          availableTasks,
-        );
-        transaction.update(targetRef, {
-          status: 'ALIVE',
-          eliminatedBy: 'ADMIN',
-          eliminatedAt: Date.now(),
-          respawnCount: (targetData.respawnCount || 0) + 1,
-          pendingEliminationBy: null,
-          pendingTaskDescription: null,
-          ...newPlayerFields,
-        });
-        const anchorRef = doc(db, 'games', gameId, 'players', anchorId);
-        transaction.update(anchorRef, anchorUpdate);
-      });
-    } else {
-      await updateDoc(targetRef, {
-        status: 'ELIMINATED',
-        eliminatedBy: 'ADMIN',
-        eliminatedAt: Date.now(),
-      });
-    }
+    await updateDoc(targetRef, {
+      status: 'ELIMINATED',
+      eliminatedBy: 'ADMIN',
+      eliminatedAt: Date.now(),
+    });
     return;
   }
 
@@ -492,34 +544,18 @@ export const adminForceEliminate = async (gameId: string, targetId: string) => {
     const assassinData = assassinEntry.data;
     const assassinRef = doc(db, 'games', gameId, 'players', assassinId);
 
-    if (isClassicMode(freshGame)) {
-      applyClassicElimination(
-        transaction,
-        gameId,
-        targetRef,
-        targetData,
-        assassinId,
-        assassinRef,
-        assassinData.killCount || 0,
-        'ADMIN',
-        false,
-      );
-    } else {
-      applyInfiniteElimination(
-        transaction,
-        gameId,
-        freshGame,
-        targetRef,
-        targetData,
-        assassinId,
-        assassinRef,
-        assassinData.killCount || 0,
-        allPlayerDocs,
-        availableTasks,
-        'ADMIN',
-        false,
-      );
-    }
+    // Infinite is handled by the early return above; this path is classic-only.
+    applyClassicElimination(
+      transaction,
+      gameId,
+      targetRef,
+      targetData,
+      assassinId,
+      assassinRef,
+      assassinData.killCount || 0,
+      'ADMIN',
+      false,
+    );
   });
 };
 
@@ -546,7 +582,7 @@ export const scrambleTask = async (gameId: string, playerId: string) => {
   const currentRerolls = playerData.rerollsUsed || 0;
   
   if (currentRerolls >= maxRerolls) {
-    throw new Error(serviceErrors.NO_MORE_OBJECTIVE_CHANGES);
+    throw new Error(serviceErrors.NO_MORE_SWAPS);
   }
 
   const availableTasks = await resolveAvailableTasks(gameData);
@@ -555,6 +591,53 @@ export const scrambleTask = async (gameId: string, playerId: string) => {
   await updateDoc(playerRef, {
     taskDescription: randomTask,
     rerollsUsed: currentRerolls + 1
+  });
+};
+
+/**
+ * Swap the caller's TARGET (infinite-only, D2). Shares the same per-game reroll
+ * budget as scrambleTask (directive swap) — only the caller's doc changes.
+ */
+export const swapTarget = async (gameId: string, playerId: string) => {
+  const gameRef = doc(db, 'games', gameId);
+  const playerRef = doc(db, 'games', gameId, 'players', playerId);
+
+  await runTransaction(db, async (transaction) => {
+    const gameDoc = await transaction.get(gameRef);
+    if (!gameDoc.exists()) throw new Error(serviceErrors.GAME_NOT_FOUND);
+    const game = parseGameOrThrow(gameDoc.data());
+
+    if (!isInfiniteMode(game)) throw new Error(serviceErrors.TARGET_SWAP_CLASSIC_ONLY);
+
+    const allPlayerDocs = await readPlayersInTransaction(transaction, gameId, game.playerIds);
+    const playerEntry = allPlayerDocs.find((p) => p.id === playerId);
+    if (!playerEntry) throw new Error(serviceErrors.PLAYER_NOT_FOUND);
+    const player = playerEntry.data;
+
+    if (player.status !== 'ALIVE') throw new Error(serviceErrors.PLAYER_NOT_ALIVE);
+
+    const maxRerolls = game.maxRerolls ?? DEFAULT_MAX_REROLLS;
+    const currentRerolls = player.rerollsUsed || 0;
+    if (currentRerolls >= maxRerolls) throw new Error(serviceErrors.NO_MORE_SWAPS);
+
+    // Defense in depth: the UI disables Swap Target below 3 alive agents (a swap couldn't
+    // change anything at 2), but the service must not trust that. Without this guard,
+    // pickIndependentTarget falls back to returning the SAME target when it is the only
+    // other alive agent — silently charging a reroll for a no-op swap.
+    const allPlayers = allPlayerDocs.map((d) => d.data);
+    const hasDifferentEligibleTarget = allPlayers.some(
+      (p) => p.status === 'ALIVE' && p.uid !== playerId && p.uid !== player.targetId,
+    );
+    if (!hasDifferentEligibleTarget) throw new Error(serviceErrors.NO_ELIGIBLE_SWAP_TARGET);
+
+    const newTargetId = pickIndependentTarget(playerId, allPlayers, player.targetId ?? undefined);
+    const newTarget = allPlayerDocs.find((d) => d.id === newTargetId)?.data;
+
+    transaction.update(playerRef, {
+      targetId: newTargetId,
+      targetCallsign: newTarget?.callsign ?? '',
+      rerollsUsed: currentRerolls + 1,
+    });
   });
 };
 
@@ -604,7 +687,13 @@ export const recoverIdentity = async (gameId: string, pin: string, newUid: strin
       const pRef = doc(db, 'games', gameId, 'players', p.uid);
       if (p.targetId === oldUid) transaction.update(pRef, { targetId: newUid });
       if (p.eliminatedBy === oldUid) transaction.update(pRef, { eliminatedBy: newUid });
-      if (p.pendingEliminationBy === oldUid) transaction.update(pRef, { pendingEliminationBy: newUid });
+      if ((p.pendingEliminations ?? []).some((e) => e.assassinId === oldUid)) {
+        transaction.update(pRef, {
+          pendingEliminations: (p.pendingEliminations ?? []).map((e) =>
+            e.assassinId === oldUid ? { ...e, assassinId: newUid } : e,
+          ),
+        });
+      }
     });
 
     // 5. Update game-level references (host/winner)
@@ -638,14 +727,12 @@ export const endInfiniteGame = async (gameId: string, winnerId?: string | null):
           targetId: null,
           targetCallsign: null,
           taskDescription: 'VICTORY ACHIEVED',
-          pendingEliminationBy: null,
-          pendingTaskDescription: null,
+          pendingEliminations: [],
         });
       } else {
         transaction.update(pRef, {
           status: 'ELIMINATED',
-          pendingEliminationBy: null,
-          pendingTaskDescription: null,
+          pendingEliminations: [],
         });
       }
     }

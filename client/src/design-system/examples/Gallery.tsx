@@ -12,7 +12,6 @@ import {
   Input,
   SegmentChips,
   PillSegments,
-  HoldToConfirm,
   Avatar,
   Badge,
   AgentRow,
@@ -169,10 +168,6 @@ export function Gallery() {
 
       <Section title="Screen Header">
         <ScreenHeader eyebrow="Op Code GGUC" title="Mission Control" />
-      </Section>
-
-      <Section title="Hold To Confirm">
-        <HoldToConfirm onConfirm={() => {}} />
       </Section>
 
       <Section title="Layout">

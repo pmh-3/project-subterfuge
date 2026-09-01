@@ -154,7 +154,7 @@ For each: when to use, anatomy, exact spec, what *not* to do.
 
 ### 5.1 `Button`
 
-**Variants:** `primary`, `ghost`, `danger` (hold-to-confirm only).
+**Variants:** `primary`, `ghost`, `danger`.
 
 | Property | `primary` | `ghost` | `danger` |
 |---|---|---|---|
@@ -170,7 +170,7 @@ For each: when to use, anatomy, exact spec, what *not* to do.
 Use:
 - `primary` for the single top-priority action on a screen ("Join Operation," "Proceed," "Begin Operation"). One per screen.
 - `ghost` for secondary alternates ("Start Operation," "Invite Agents," "Acknowledge").
-- `danger` exclusively for the hold-to-confirm Neutralize on Contract. Not for delete confirmations elsewhere — use `ghost` + an alert dialog for those.
+- `danger` for destructive taps: Neutralize on Contract, End Operation in Admin. Not for delete confirmations elsewhere — use `ghost` + an alert dialog for those.
 
 **Don't:** put two `primary` buttons next to each other; use `inkSecondary` as the button fill (that's text); add a shadow on hover.
 
@@ -224,17 +224,9 @@ Two visual flavors in the reference:
 - "You" / current-user variant: `surface` bg, `borderStrong` border, 3px `accent` left border (border-radius collapses on the left → `0 2px 2px 0`).
 - "HOST" badge inline next to name: `labelMicro`, 8px left margin.
 
-### 5.9 Hold-to-confirm
+### 5.9 Destructive tap actions
 
-The Neutralize action on Contract:
-
-1. Container: `danger` bg, `radius.sm`, centered `metaMicro` text "NEUTRALIZE TARGET."
-2. While held: an absolutely-positioned overlay fills left-to-right with `dangerHover`, width = progress%, transition `0.05s linear`.
-3. Text swaps to "CONFIRMING N%" during the hold.
-4. On complete: container swap to confirmation panel — `successSurface` bg, `successBorder` border, `success` text "✓ TARGET NEUTRALIZED."
-5. Helper line below in `labelMicro` `inkMuted`: "HOLD TO CONFIRM."
-
-This is the only place we use `danger`. The hold mechanic is the existing `useHoldToConfirm` hook — just restyle it.
+Neutralize on Contract and End Operation in Admin use `Button` variant `danger` — a single tap, no hold mechanic. Full-width on Contract; standard `Button` sizing elsewhere.
 
 ---
 
