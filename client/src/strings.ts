@@ -254,7 +254,7 @@ export const briefingParagraphs = [
   'Midnight Wire is a party game of social deception.',
   "Every agent has a secret target and a mission: get that one person to do something without them realizing you set them up.",
   "Pull it off and you catch them, scoring a point. Getting caught is not the end. Caught agents keep playing, back in the game with a fresh start.",
-  'After a catch you get a brand-new target and a brand-new mission. Nothing is inherited, so keep your eyes open: the person hunting you may have just changed.',
+  'When you catch someone, you get a brand-new target and mission of your own. Nothing is inherited, so stay sharp: the agent hunting you can change at any time.',
   'First agent to reach the score to win takes the game. Your host can also run Classic mode instead, where getting caught knocks you out and the last agent standing wins.',
 ] as const;
 

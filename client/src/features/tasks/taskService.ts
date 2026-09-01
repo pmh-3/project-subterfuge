@@ -50,8 +50,11 @@ export const fetchTaskPacks = async (): Promise<TaskPack[]> => {
   missionsSnap.forEach(doc => {
     const data = doc.data();
     const packId = data.pack_id;
+    // Skip missions with a missing/blank directive so a bad data doc can't
+    // surface a blank example line in the pack preview (mirrors getTasksFromPacks).
+    if (typeof data.directive !== 'string' || data.directive.trim() === '') return;
     if (!missionsByPack[packId]) missionsByPack[packId] = [];
-    
+
     missionsByPack[packId].push({
       id: doc.id,
       text: data.directive,
