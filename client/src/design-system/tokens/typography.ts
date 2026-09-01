@@ -34,6 +34,7 @@ export type TextVariant =
   | 'codeSmall'
   | 'codeMicro'
   | 'bodyInput'
+  | 'directive'
   | 'body'
   | 'bodySmall'
   | 'buttonLarge'
@@ -117,6 +118,13 @@ export const textVariants: Record<TextVariant, VariantStyle> = {
     fontWeight: '300',
     letterSpacing: tracking(18, 0.02),
   },
+  directive: {
+    fontFamily: fontFamily.sansSemibold,
+    fontSize: 21,
+    fontWeight: '600',
+    letterSpacing: tracking(21, 0.01),
+    lineHeight: 21 * 1.35,
+  },
   body: {
     fontFamily: fontFamily.sansMedium,
     fontSize: 16,
@@ -150,9 +158,9 @@ export const textVariants: Record<TextVariant, VariantStyle> = {
     letterSpacing: tracking(14, 0.08),
     textTransform: 'uppercase',
   },
-  label: labelBase(10, 0.22),
-  labelLarge: labelBase(10, 0.28),
-  labelMicro: labelBase(9, 0.12),
+  label: labelBase(12, 0.20),
+  labelLarge: labelBase(12, 0.26),
+  labelMicro: labelBase(11, 0.12),
   metaMicro: {
     fontFamily: fontFamily.typewriter,
     fontSize: typewriterSize(12),

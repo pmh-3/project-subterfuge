@@ -19,4 +19,15 @@ describe('typography tokens', () => {
     expect(textVariants.label.textTransform).toBe('uppercase');
     expect(textVariants.labelMicro.textTransform).toBe('uppercase');
   });
+
+  it('keeps label chrome tokens at an accessible floor (D9)', () => {
+    expect(textVariants.label.fontSize).toBe(12);
+    expect(textVariants.labelLarge.fontSize).toBe(12);
+    expect(textVariants.labelMicro.fontSize).toBe(11);
+  });
+
+  it('gives the directive variant first-class size (D9)', () => {
+    expect(textVariants.directive.fontSize).toBe(21);
+    expect(textVariants.directive.fontWeight).toBe('600');
+  });
 });

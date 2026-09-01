@@ -15,10 +15,10 @@ export interface GameCodeTagProps {
 export function GameCodeTag({ code, label, onPress, style }: GameCodeTagProps) {
   const content = (
     <>
-      <Text variant="labelMicro" muted>
+      <Text variant="labelMicro" muted maxFontSizeMultiplier={1.4}>
         {label}
       </Text>
-      <Text variant="codeMedium" color={colors.inkPrimary}>
+      <Text variant="codeMedium" color={colors.inkPrimary} maxFontSizeMultiplier={1.4}>
         {code}
       </Text>
     </>
