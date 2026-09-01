@@ -106,8 +106,16 @@ export function getKillGoal(game: Pick<Game, 'infiniteConfig'>): number {
   return game.infiniteConfig?.endCondition.value ?? DEFAULT_INFINITE_KILL_GOAL;
 }
 
-const pickTask = (tasks: string[], rng: () => number): string =>
-  tasks[Math.floor(rng() * tasks.length)]!;
+// Last line of defense (batch-2 #4c): never return undefined/'' even if the
+// pool is empty or riddled with blanks. Firestore rejects undefined field
+// writes and a blank directive silently breaks the Contract/confirm flow, so
+// callers always receive a usable, non-blank string.
+const TASK_FALLBACK = 'Get your target to complete a small favor for you.';
+const pickTask = (tasks: string[], rng: () => number): string => {
+  const usable = tasks.filter((t) => typeof t === 'string' && t.trim().length > 0);
+  if (usable.length === 0) return TASK_FALLBACK;
+  return usable[Math.floor(rng() * usable.length)]!;
+};
 
 /**
  * Picks a fresh independent target for `agentId`: a random ALIVE agent, never

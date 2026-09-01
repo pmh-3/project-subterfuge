@@ -98,17 +98,24 @@ export const getTasksFromPacks = async (
     snapshot.forEach(doc => {
       const data = doc.data();
       const difficulty = data.difficulty as number;
-      
+      const text = data.directive;
+
+      // Robustness: a malformed Firestore mission doc (missing/blank directive)
+      // must never enter the pool. A blank task can be picked and then written
+      // to a player, and Firestore rejects undefined field writes — which is
+      // what wedged a player mid-confirm. Filter it out at the source.
+      if (typeof text !== 'string' || text.trim().length === 0) return;
+
       if (allowedScales.includes(difficulty)) {
         allTasks.push({
           id: doc.id,
-          text: data.directive,
+          text,
           difficultyScale: difficulty as 1 | 2 | 3
         });
       }
     });
   }
-  
+
   return allTasks;
 };
 
