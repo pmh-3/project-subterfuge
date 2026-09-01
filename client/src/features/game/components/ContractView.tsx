@@ -54,8 +54,14 @@ export const ContractView = ({
   const rerollsLeft = effectiveMaxRerolls - (player.rerollsUsed || 0);
   const budgetEnabled = effectiveMaxRerolls > 0;
   const canSwap = budgetEnabled && !isPending && rerollsLeft > 0 && !loading;
+  // Swap Target intentionally excludes the CURRENT target from the candidate pool
+  // (pickIndependentTarget's avoidId) so a swap always yields a *different* target.
+  // That needs at least 3 ALIVE agents (self + current target + one alternative);
+  // below that the service no-ops, so we disable here and surface the reason via
+  // the hint below rather than letting the tap look like a silent failure.
   const targetSwapPossible = aliveCount === undefined || aliveCount >= 3;
   const canSwapTarget = canSwap && !!isInfinite && !!onSwapTarget && targetSwapPossible;
+  const showSwapTargetHint = !!isInfinite && !!onSwapTarget && !targetSwapPossible;
   const swapIcon = <IconShuffle size={14} color={colors.inkPrimary} />;
 
   return (
@@ -108,6 +114,11 @@ export const ContractView = ({
                     disabled={!canSwapTarget}
                     loading={loading}
                   />
+                ) : null}
+                {showSwapTargetHint ? (
+                  <Text variant="labelMicro" muted style={styles.hint}>
+                    {strings.CONTRACT_SWAP_TARGET_NEEDS_AGENTS}
+                  </Text>
                 ) : null}
                 <Text variant="labelMicro" muted style={styles.hint}>
                   {strings.CONTRACT_SWAP_HINT}

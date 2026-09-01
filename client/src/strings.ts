@@ -83,7 +83,7 @@ export const strings = {
   CONFIGURE_DIFFICULTY_HINT: 'How hard the assigned missions should be.',
   CONFIGURE_OBJECTIVE_SWAPS_LABEL: 'MISSION SWAPS',
   CONFIGURE_OBJECTIVE_SWAPS_HINT:
-    'How many times each agent can swap their mission over the whole game — a fixed budget, not per target.',
+    'How many times each agent can swap their mission over the whole game. A fixed budget, not per target.',
   CONFIGURE_AUTHORIZE_BUTTON: 'SAVE',
   CONFIGURE_BACK_TO_LOBBY: '← BACK TO LOBBY',
   CONFIGURE_CONNECTION_ERROR_TITLE: 'Connection Error',
@@ -103,7 +103,7 @@ export const strings = {
   GAME_ALERT_TITLE: '⚠ ALERT ⚠',
   GAME_ALERT_COMPROMISED: "YOU'VE BEEN CAUGHT",
   GAME_CONFIRM_ELIMINATION: 'CONFIRM: I WAS CAUGHT',
-  GAME_DENY_ELIMINATION: 'NO — STILL IN PLAY',
+  GAME_DENY_ELIMINATION: 'NO, STILL IN PLAY',
   GAME_SPECTATOR_MODE: 'SPECTATOR MODE',
   GAME_SPECTATOR_HOST: 'HOST CONTROLS AVAILABLE',
   GAME_SPECTATOR_READONLY: 'OBSERVATION ONLY',
@@ -156,13 +156,14 @@ export const strings = {
   CONTRACT_PENDING_CONFIRMATION: 'PENDING CONFIRMATION',
   CONTRACT_NEUTRALIZE_TARGET: 'CATCH TARGET',
   CONTRACT_NEUTRALIZE_HINT: 'Tap once your mission on them succeeds.',
-  CONTRACT_SWAP_HINT: 'Trade this mission or target for a new one — swaps are limited.',
+  CONTRACT_SWAP_HINT: 'Trade this mission or target for a new one. Swaps are limited.',
+  CONTRACT_SWAP_TARGET_NEEDS_AGENTS: 'Need 3+ agents to swap target.',
   NO_MORE_SWAPS: 'No swaps left this game.',
 
   // --- First-run coach card (D9, #9) ---
   COACH_CONTRACT_TITLE: 'HOW THIS WORKS',
   COACH_CONTRACT_BODY:
-    "You have a secret target and a mission for them to complete. Get them to do it, then tap CATCH TARGET to confirm the catch. Keep going until you're the last agent standing — or you hit the score to win.",
+    "You have a secret target and a mission for them to complete. Get them to do it, then tap CATCH TARGET to confirm the catch. Score points until someone hits the score to win, or, in Classic mode, until you're the last agent standing.",
   COACH_DISMISS: 'GOT IT',
 
   // --- Command center / Situation room ---
@@ -222,6 +223,7 @@ export const strings = {
   HOST_TASK_PACKS_LABEL: 'MISSION PACKS',
   HOST_FUTURE_MISSIONS_ONLY_HINT:
     'Applies to future missions only. Current assignments are unchanged.',
+  HOST_KILL_GOAL_LOCKED_HINT: 'Locked once the game starts.',
 
   // --- Host settings: Pending Confirmations panel (D7) ---
   HOST_PENDING_CONFIRMATIONS_LABEL: 'PENDING CONFIRMATIONS',
@@ -250,8 +252,10 @@ export const strings = {
 /** Briefing modal body copy (paragraphs) */
 export const briefingParagraphs = [
   'Midnight Wire is a party game of social deception.',
-  "Each agent gets a secret mission and a target: one person in the room you're trying to influence. Your job is to get them to complete your mission without them realizing you set them up.",
-  'When a mission succeeds, that agent is out. You inherit their target and keep playing. Last agent standing wins.',
+  "Every agent has a secret target and a mission: get that one person to do something without them realizing you set them up.",
+  "Pull it off and you catch them, scoring a point. Getting caught is not the end. Caught agents keep playing, back in the game with a fresh start.",
+  'After a catch you get a brand-new target and a brand-new mission. Nothing is inherited, so keep your eyes open: the person hunting you may have just changed.',
+  'First agent to reach the score to win takes the game. Your host can also run Classic mode instead, where getting caught knocks you out and the last agent standing wins.',
 ] as const;
 
 /** Dynamic strings with interpolation */
@@ -264,7 +268,7 @@ export const dynamicStrings = {
     `Remove ${name} from the game? Their target will be reassigned to someone else.`,
   theirObjectiveWas: (task: string) => `THEIR MISSION: ${task}`,
   // Shown when several assassins have stacked claims against the same victim (D5).
-  multiClaimVictim: (n: number) => `${n} agents are claiming you — confirm each.`,
+  multiClaimVictim: (n: number) => `${n} agents are claiming you. Confirm each.`,
   rosterSectionTitle: (title: string, count: number) => `${title} (${count})`,
   killedBy: (killerName: string) => `by ${killerName}`,
   activeAgentsCount: (count: number) => `ACTIVE AGENTS (${count})`,

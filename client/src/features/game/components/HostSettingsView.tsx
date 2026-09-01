@@ -86,6 +86,11 @@ export const HostSettingsView = ({
   const router = useRouter();
   const activePlayers = players.filter((p) => p.status === 'ALIVE');
   const standings = isInfinite ? sortPlayersByLeaderboard(activePlayers) : activePlayers;
+  // Batch-2 #6b: removed/eliminated players used to vanish from the host roster
+  // (only ALIVE was shown), making a force-removed agent look like it disappeared.
+  // Surface them in a read-only INACTIVE AGENTS section so the host can still see
+  // who was removed.
+  const eliminatedPlayers = players.filter((p) => p.status === 'ELIMINATED');
 
   const togglePack = (packId: string) => {
     if (!onUpdatePacks || !selectedPacks) return;
@@ -173,19 +178,82 @@ export const HostSettingsView = ({
 
         {isLobby || isGameActive ? (
           <>
-            {isGameActive && isInfinite && killGoal != null && onUpdateKillGoal ? (
+            {/*
+              Batch-2 #3: Pending Confirmations is the most time-sensitive thing a
+              host handles mid-game (a claimed catch waiting to be confirmed/denied),
+              so it renders FIRST — above Mission Success and Mission Settings —
+              during an ACTIVE game. Confirm/deny wiring is unchanged.
+            */}
+            {isGameActive && pendingRows && pendingRows.length > 0 ? (
+              <View style={styles.pendingSection}>
+                <Text variant="label" muted style={styles.sectionLabel}>
+                  {dynamicStrings.rosterSectionTitle(
+                    strings.HOST_PENDING_CONFIRMATIONS_LABEL,
+                    pendingRows.length,
+                  )}
+                </Text>
+                <Stack gap={3}>
+                  {pendingRows.map((row) => (
+                    <View key={`${row.targetId}-${row.assassinId}`} style={styles.pendingRow}>
+                      <Text variant="body">
+                        {dynamicStrings.pendingRowSummary(row.assassinCallsign, row.targetCallsign)}
+                      </Text>
+                      {row.taskDescription ? (
+                        <Text variant="labelMicro" muted style={styles.pendingSubtitle}>
+                          {row.taskDescription}
+                        </Text>
+                      ) : null}
+                      <Row gap={3} style={styles.pendingActions}>
+                        <Button
+                          title={strings.HOST_PENDING_CONFIRM_BUTTON}
+                          onPress={() => onConfirmPending?.(row.targetId, row.assassinId)}
+                          variant="primary"
+                          size="sm"
+                          style={styles.pendingActionButton}
+                        />
+                        <Button
+                          title={strings.HOST_PENDING_DENY_BUTTON}
+                          onPress={() => onDenyPending?.(row.targetId, row.assassinId)}
+                          variant="ghost"
+                          size="sm"
+                          style={styles.pendingActionButton}
+                        />
+                      </Row>
+                    </View>
+                  ))}
+                </Stack>
+                <Rule marginVertical={8} />
+              </View>
+            ) : null}
+
+            {/*
+              Batch-2 #7: the kill goal (SCORE TO WIN) is an owner decision that is
+              LOBBY-ONLY editable. During an ACTIVE game the host can still SEE the
+              goal but not change it — the caller stops passing onUpdateKillGoal
+              mid-game, so we render a read-only value with a "locked" hint.
+            */}
+            {isGameActive && isInfinite && killGoal != null ? (
               <View style={styles.infiniteSection}>
                 <Text variant="label" muted style={styles.sectionLabel}>
                   {strings.HOST_MISSION_SUCCESS_LABEL}
                 </Text>
-                <PillSegments
-                  value={String(killGoal)}
-                  onChange={(v) => onUpdateKillGoal(Number(v))}
-                  options={INFINITE_KILL_GOAL_OPTIONS.map((n) => ({
-                    value: String(n),
-                    label: String(n),
-                  }))}
-                />
+                {onUpdateKillGoal ? (
+                  <PillSegments
+                    value={String(killGoal)}
+                    onChange={(v) => onUpdateKillGoal(Number(v))}
+                    options={INFINITE_KILL_GOAL_OPTIONS.map((n) => ({
+                      value: String(n),
+                      label: String(n),
+                    }))}
+                  />
+                ) : (
+                  <>
+                    <Text variant="displayLarge">{String(killGoal)}</Text>
+                    <Text variant="labelMicro" muted style={styles.subLabel}>
+                      {strings.HOST_KILL_GOAL_LOCKED_HINT}
+                    </Text>
+                  </>
+                )}
                 <Rule marginVertical={8} />
               </View>
             ) : null}
@@ -263,48 +331,6 @@ export const HostSettingsView = ({
               </View>
             ) : null}
 
-            {isGameActive && pendingRows && pendingRows.length > 0 ? (
-              <View style={styles.pendingSection}>
-                <Text variant="label" muted style={styles.sectionLabel}>
-                  {dynamicStrings.rosterSectionTitle(
-                    strings.HOST_PENDING_CONFIRMATIONS_LABEL,
-                    pendingRows.length,
-                  )}
-                </Text>
-                <Stack gap={3}>
-                  {pendingRows.map((row) => (
-                    <View key={`${row.targetId}-${row.assassinId}`} style={styles.pendingRow}>
-                      <Text variant="body">
-                        {dynamicStrings.pendingRowSummary(row.assassinCallsign, row.targetCallsign)}
-                      </Text>
-                      {row.taskDescription ? (
-                        <Text variant="labelMicro" muted style={styles.pendingSubtitle}>
-                          {row.taskDescription}
-                        </Text>
-                      ) : null}
-                      <Row gap={3} style={styles.pendingActions}>
-                        <Button
-                          title={strings.HOST_PENDING_CONFIRM_BUTTON}
-                          onPress={() => onConfirmPending?.(row.targetId, row.assassinId)}
-                          variant="primary"
-                          size="sm"
-                          style={styles.pendingActionButton}
-                        />
-                        <Button
-                          title={strings.HOST_PENDING_DENY_BUTTON}
-                          onPress={() => onDenyPending?.(row.targetId, row.assassinId)}
-                          variant="ghost"
-                          size="sm"
-                          style={styles.pendingActionButton}
-                        />
-                      </Row>
-                    </View>
-                  ))}
-                </Stack>
-                <Rule marginVertical={8} />
-              </View>
-            ) : null}
-
             <Text variant="label" muted style={styles.sectionLabel}>
               {isGameActive && isInfinite
                 ? strings.INTEL_LEADERBOARD
@@ -345,6 +371,34 @@ export const HostSettingsView = ({
               <Text variant="bodySmall" muted style={styles.empty}>
                 {strings.HOST_NO_ACTIVE_AGENTS}
               </Text>
+            ) : null}
+
+            {/* Batch-2 #6b: read-only roster of removed/eliminated agents. */}
+            {isGameActive && eliminatedPlayers.length > 0 ? (
+              <View style={styles.inactiveSection}>
+                <Rule marginVertical={8} />
+                <Text variant="label" muted style={styles.sectionLabel}>
+                  {dynamicStrings.rosterSectionTitle(
+                    strings.INTEL_INACTIVE_AGENTS,
+                    eliminatedPlayers.length,
+                  )}
+                </Text>
+                <Stack gap={3}>
+                  {eliminatedPlayers.map((player) => (
+                    <View key={player.uid} style={styles.row}>
+                      <View style={styles.rowTop}>
+                        <AgentRow
+                          callsign={player.callsign}
+                          avatarId={player.avatarId}
+                          isHost={player.uid === hostId}
+                          style={styles.agentInfo}
+                        />
+                        <Badge label={player.status} variant="danger" style={styles.statusBadge} />
+                      </View>
+                    </View>
+                  ))}
+                </Stack>
+              </View>
             ) : null}
 
             {isGameActive && onEndGame ? (
@@ -472,5 +526,8 @@ const styles = StyleSheet.create({
   },
   infiniteSection: {
     marginBottom: space[6],
+  },
+  inactiveSection: {
+    marginTop: space[8],
   },
 });
