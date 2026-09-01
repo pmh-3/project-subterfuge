@@ -292,7 +292,7 @@ export default function LobbyScreen() {
             setOperationCode(text.toUpperCase());
             setInlineError(null);
           }}
-          placeholder={strings.LOBBY_OPERATION_CODE_PLACEHOLDER}
+          placeholder={strings.LOBBY_GAME_CODE_PLACEHOLDER}
           maxLength={4}
           autoCapitalize="characters"
         />

@@ -23,7 +23,7 @@ interface ContractViewProps {
   targetAvatarId?: string;
   isPending: boolean;
   onLogKill: () => void;
-  onScramble: () => void;
+  onSwap: () => void;
   loading?: boolean;
   maxRerolls?: number;
 }
@@ -33,14 +33,14 @@ export const ContractView = ({
   targetAvatarId,
   isPending,
   onLogKill,
-  onScramble,
+  onSwap,
   loading,
   maxRerolls,
 }: ContractViewProps) => {
   const effectiveMaxRerolls = maxRerolls ?? DEFAULT_MAX_REROLLS;
   const rerollsLeft = effectiveMaxRerolls - (player.rerollsUsed || 0);
   const showSwap = effectiveMaxRerolls > 0;
-  const canShuffle = showSwap && !isPending && rerollsLeft > 0;
+  const canSwap = showSwap && !isPending && rerollsLeft > 0;
 
   return (
     <View style={styles.container}>
@@ -72,15 +72,15 @@ export const ContractView = ({
             {showSwap ? (
               <Stack gap={3} style={styles.swapAction}>
                 <Button
-                  title={strings.CONTRACT_SWAP_DIRECTIVE}
-                  onPress={onScramble}
+                  title={strings.CONTRACT_SWAP_MISSION}
+                  onPress={onSwap}
                   variant="ghost"
                   fullWidth
-                  disabled={!canShuffle || loading}
+                  disabled={!canSwap || loading}
                   loading={loading}
                 />
                 <Text variant="labelMicro" muted style={styles.swapHint}>
-                  {dynamicStrings.objectiveSwapsLeft(rerollsLeft)}
+                  {dynamicStrings.swapsLeftThisGame(rerollsLeft)}
                 </Text>
               </Stack>
             ) : null}

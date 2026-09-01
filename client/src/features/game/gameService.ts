@@ -574,7 +574,7 @@ export const scrambleTask = async (gameId: string, playerId: string) => {
   const currentRerolls = playerData.rerollsUsed || 0;
   
   if (currentRerolls >= maxRerolls) {
-    throw new Error(serviceErrors.NO_MORE_OBJECTIVE_CHANGES);
+    throw new Error(serviceErrors.NO_MORE_SWAPS);
   }
 
   const availableTasks = await resolveAvailableTasks(gameData);

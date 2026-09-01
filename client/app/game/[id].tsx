@@ -189,7 +189,7 @@ export default function GameRoomScreen() {
     }
   };
 
-  const executeScramble = async () => {
+  const executeSwap = async () => {
     try {
       setActionLoading(true);
       await scrambleTask(id!, user!.uid);
@@ -391,7 +391,7 @@ export default function GameRoomScreen() {
           </Text>
           {pendingQueue.length > 1 ? (
             <Text variant="bodySmall" muted style={styles.alertObjective}>
-              {dynamicStrings.multipleClaimsNote(pendingQueue.length)}
+              {dynamicStrings.multiClaimVictim(pendingQueue.length)}
             </Text>
           ) : null}
           {headClaim.taskDescription ? (
@@ -464,7 +464,7 @@ export default function GameRoomScreen() {
           targetAvatarId={targetPlayer?.avatarId}
           isPending={(targetPlayer?.pendingEliminations?.length ?? 0) > 0}
           onLogKill={executeChallenge}
-          onScramble={executeScramble}
+          onSwap={executeSwap}
           loading={actionLoading}
           maxRerolls={game.maxRerolls}
         />
