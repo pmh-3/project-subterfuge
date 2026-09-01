@@ -57,6 +57,7 @@ export const PlayerSchema = z.object({
   killCount: z.number().nullish(),
   respawnCount: z.number().nullish(),
   rerollsUsed: z.number().nullish(),
+  joinedMidGame: z.boolean().nullish(),
   emergencyPin: z.string().optional(),
 });
 

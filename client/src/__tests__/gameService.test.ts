@@ -112,6 +112,15 @@ describe('createGame (D4 — configure before Create Game)', () => {
     expect(playerDoc.callsign).toBe('Ghost');
     expect(playerDoc.status).toBe('ALIVE');
   });
+
+  it('does NOT mark the host as joinedMidGame (guards the mid-join banner false-positive)', async () => {
+    await createGame('host-1', 'Ghost', '123', 'icon-a');
+
+    const [, playerDoc] = mockSetDoc.mock.calls[1];
+    // Original/lobby players (incl. the host) must never carry this flag, or the
+    // "joined mid-operation" banner false-fires once setup exceeds a minute.
+    expect(playerDoc.joinedMidGame).toBeUndefined();
+  });
 });
 
 describe('confirmElimination / denyElimination — shared-target queue (D5/D7)', () => {

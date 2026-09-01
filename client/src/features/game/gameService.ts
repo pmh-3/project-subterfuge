@@ -165,6 +165,7 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
       respawnCount: 0,
       rerollsUsed: 0,
       pendingEliminations: [],
+      joinedMidGame: true,
       ...newPlayerFields,
     });
 

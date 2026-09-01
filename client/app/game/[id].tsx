@@ -282,14 +282,15 @@ export default function GameRoomScreen() {
     if (!game || !me || !id) return;
     const checkMidJoinBanner = async () => {
       if (!isInfinite || game.status !== 'ACTIVE') return;
+      // Only genuine mid-game joiners carry this flag (set in joinGame's ACTIVE
+      // branch). Original lobby players — including the host — never do, so the
+      // banner can't false-fire just because setup took longer than a minute.
+      if (!me.joinedMidGame) return;
       const key = `mid_join_banner_${id}`;
       const shown = await storage.get(key);
       if (shown) return;
-      const joinedAfterStart = me.killCount === 0 && (me.respawnCount ?? 0) === 0;
-      if (joinedAfterStart && game.createdAt && Date.now() - game.createdAt > 60_000) {
-        showTransientBanner(strings.GAME_JOINED_MID_OPERATION);
-        await storage.save(key, '1');
-      }
+      showTransientBanner(strings.GAME_JOINED_MID_OPERATION);
+      await storage.save(key, '1');
     };
     void checkMidJoinBanner();
   }, [game, me, id, isInfinite, showTransientBanner]);
