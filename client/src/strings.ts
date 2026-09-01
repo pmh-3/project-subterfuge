@@ -207,6 +207,24 @@ export const strings = {
   HOST_NO_ACTIVE_AGENTS: 'NO ACTIVE AGENTS FOUND',
   HOST_END_OPERATION: 'END GAME',
 
+  // --- Host settings: mid-game editable settings (D6) ---
+  HOST_MISSION_SETTINGS_SECTION: 'MISSION SETTINGS',
+  HOST_SWAPS_BUDGET_LABEL: 'MISSION SWAPS',
+  HOST_DIFFICULTY_LABEL: 'MISSION DIFFICULTY',
+  HOST_TASK_PACKS_LABEL: 'MISSION PACKS',
+  HOST_FUTURE_MISSIONS_ONLY_HINT:
+    'Applies to future missions only. Current assignments are unchanged.',
+
+  // --- Host settings: Pending Confirmations panel (D7) ---
+  HOST_PENDING_CONFIRMATIONS_LABEL: 'PENDING CONFIRMATIONS',
+  HOST_PENDING_CONFIRM_BUTTON: 'CONFIRM',
+  HOST_PENDING_DENY_BUTTON: 'DENY',
+
+  // --- Host settings: roster chips ---
+  HOST_CHIP_TARGET_PREFIX: 'TARGET:',
+  HOST_CHIP_PENDING_PREFIX: 'PENDING:',
+  HOST_CHIP_SWAPS_PREFIX: 'SWAPS:',
+
   // --- Info / briefing ---
   INFO_TITLE: 'HOW TO PLAY',
   INFO_SECTION_HOW_IT_WORKS: 'How to play',
@@ -247,6 +265,9 @@ export const dynamicStrings = {
   packTasksCount: (n: number) => `${n} mission${n === 1 ? '' : 's'}`,
   operationFailedWithMessage: (message: string) => `Failed to force eliminate: ${message}`,
   endOperationFailed: (message: string) => `Failed to end game: ${message}`,
+  // Pending Confirmations panel row (D7): "assassin → target : mission"
+  pendingRowSummary: (assassinCallsign: string, targetCallsign: string) =>
+    `${assassinCallsign} → ${targetCallsign}`,
 } as const;
 
 /** Service error messages (thrown and shown in alerts) */

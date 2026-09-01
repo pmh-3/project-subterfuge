@@ -3,7 +3,9 @@ import {
   buildTargetChain,
   detectWin,
   computeEliminationUpdates,
+  buildPendingRows,
 } from '@/features/game/gameLogic';
+import { Player } from '@/types';
 
 describe('shufflePlayers', () => {
   it('returns the same array reference', () => {
@@ -111,5 +113,68 @@ describe('computeEliminationUpdates', () => {
       targetData, 'assassin', 2, 'ADMIN', false,
     );
     expect(assassinUpdate.killCount).toBeUndefined();
+  });
+});
+
+describe('buildPendingRows (D7 — Pending Confirmations panel)', () => {
+  const mkPlayer = (overrides: Partial<Player> & Pick<Player, 'uid' | 'callsign'>): Player => ({
+    status: 'ALIVE',
+    ...overrides,
+  });
+
+  it('flattens every player queue into assassin -> target rows', () => {
+    const players: Player[] = [
+      mkPlayer({
+        uid: 'target-1',
+        callsign: 'Bravo',
+        pendingEliminations: [
+          { assassinId: 'a1', assassinCallsign: 'Alpha', taskDescription: 'Say hi', claimedAt: 200 },
+        ],
+      }),
+      mkPlayer({ uid: 'target-2', callsign: 'Charlie' }),
+    ];
+
+    const rows = buildPendingRows(players);
+
+    expect(rows).toEqual([
+      {
+        targetId: 'target-1',
+        targetCallsign: 'Bravo',
+        assassinId: 'a1',
+        assassinCallsign: 'Alpha',
+        taskDescription: 'Say hi',
+        claimedAt: 200,
+      },
+    ]);
+  });
+
+  it('preserves every stacked claim on a shared target and sorts the global list by claimedAt', () => {
+    const players: Player[] = [
+      mkPlayer({
+        uid: 'shared-target',
+        callsign: 'Delta',
+        pendingEliminations: [
+          { assassinId: 'a2', assassinCallsign: 'Bravo', taskDescription: 'Second claim', claimedAt: 500 },
+          { assassinId: 'a1', assassinCallsign: 'Alpha', taskDescription: 'First claim', claimedAt: 100 },
+        ],
+      }),
+      mkPlayer({
+        uid: 'other-target',
+        callsign: 'Echo',
+        pendingEliminations: [
+          { assassinId: 'a3', assassinCallsign: 'Charlie', taskDescription: 'Third claim', claimedAt: 300 },
+        ],
+      }),
+    ];
+
+    const rows = buildPendingRows(players);
+
+    expect(rows.map((r) => r.assassinId)).toEqual(['a1', 'a3', 'a2']);
+    expect(rows).toHaveLength(3);
+  });
+
+  it('returns an empty list when no player has a pending claim', () => {
+    const players: Player[] = [mkPlayer({ uid: 'p1', callsign: 'Alpha' })];
+    expect(buildPendingRows(players)).toEqual([]);
   });
 });

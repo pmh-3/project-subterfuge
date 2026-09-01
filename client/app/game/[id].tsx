@@ -16,6 +16,8 @@ import {
   adminForceEliminate,
   endGame,
 } from '@/features/game/gameService';
+import { fetchTaskPacks } from '@/features/tasks/taskService';
+import { TaskPack, DifficultySetting } from '@/types/taskPack';
 import {
   Text,
   Button,
@@ -36,12 +38,12 @@ import { VictoryOverlay } from '@/features/game/components/VictoryOverlay';
 import { useAlert } from '@/hooks/useAlert';
 import { useLayout } from '@/hooks/useLayout';
 import { APP_URL, PULSE_DURATION, SPECTATOR_CHECK_DELAY } from '@/constants';
-import { isInfiniteMode, getKillGoal } from '@/features/game/gameLogic';
+import { isInfiniteMode, getKillGoal, buildPendingRows } from '@/features/game/gameLogic';
 import { storage } from '@/utils/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 import { ProductMark, PRODUCT_MARK_SIZES } from '@/components/branding';
-import { strings, dynamicStrings, useGameErrors } from '@/strings';
+import { strings, dynamicStrings, useGameErrors, serviceErrors } from '@/strings';
 
 type TabKey = 'CONTRACT' | 'SITUATION' | 'ADMIN' | 'INFO';
 
@@ -65,6 +67,7 @@ export default function GameRoomScreen() {
   const [showVictoryOverlay, setShowVictoryOverlay] = useState(false);
   const [showForceEliminate, setShowForceEliminate] = useState(false);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
+  const [taskPacks, setTaskPacks] = useState<TaskPack[]>([]);
 
   const handleStart = useCallback(async () => {
     try {
@@ -150,6 +153,23 @@ export default function GameRoomScreen() {
   }, [game?.status, game, user?.uid]);
 
   const isInfinite = game ? isInfiniteMode(game) : false;
+
+  // D6: task packs for the Host tab's mid-game "Mission settings" section
+  // (packs multi-select). Only needed for the host, and only in infinite.
+  useEffect(() => {
+    if (!isHost || !isInfinite) return;
+    let cancelled = false;
+    fetchTaskPacks()
+      .then((packs) => {
+        if (!cancelled) setTaskPacks(packs);
+      })
+      .catch(() => {
+        // Non-fatal: the packs sub-section simply stays empty.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, isInfinite]);
 
   const alivePlayers = players.filter(
     (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION' || p.status === 'WINNER',
@@ -331,6 +351,91 @@ export default function GameRoomScreen() {
     [id, showAlert],
   );
 
+  // D6: mid-game editable settings, thin updateDoc handlers (Mission settings
+  // section, Host tab). Difficulty/packs only affect the *next* task drawn —
+  // existing assignments are untouched (resolveAvailableTasks reads these at
+  // call time, gameService.ts).
+  const handleUpdateMaxRerolls = useCallback(
+    async (n: number) => {
+      if (!id) return;
+      try {
+        await updateDoc(doc(db, 'games', id), { maxRerolls: n });
+      } catch (e) {
+        showAlert({
+          title: strings.ALERT_OPERATION_FAILED_TITLE,
+          message: e instanceof Error ? e.message : strings.GAME_ALERT_UNKNOWN_ERROR,
+        });
+      }
+    },
+    [id, showAlert],
+  );
+
+  const handleUpdateDifficulty = useCallback(
+    async (d: DifficultySetting) => {
+      if (!id) return;
+      try {
+        await updateDoc(doc(db, 'games', id), { difficultySetting: d });
+      } catch (e) {
+        showAlert({
+          title: strings.ALERT_OPERATION_FAILED_TITLE,
+          message: e instanceof Error ? e.message : strings.GAME_ALERT_UNKNOWN_ERROR,
+        });
+      }
+    },
+    [id, showAlert],
+  );
+
+  const handleUpdatePacks = useCallback(
+    async (ids: string[]) => {
+      if (!id || ids.length === 0) return; // never allow an empty selection
+      try {
+        await updateDoc(doc(db, 'games', id), { selectedPacks: ids });
+      } catch (e) {
+        showAlert({
+          title: strings.ALERT_OPERATION_FAILED_TITLE,
+          message: e instanceof Error ? e.message : strings.GAME_ALERT_UNKNOWN_ERROR,
+        });
+      }
+    },
+    [id, showAlert],
+  );
+
+  // D7: host panel resolves a SPECIFIC queued entry (assassinId provided). The
+  // NO_PENDING_ELIMINATION race (victim resolved it from their own screen at the
+  // same moment) is benign — the desired outcome already happened — so it is
+  // swallowed silently; the live players snapshot removes the row on its own.
+  const handleConfirmPending = useCallback(
+    async (targetId: string, assassinId: string) => {
+      try {
+        await confirmElimination(id!, targetId, assassinId);
+      } catch (e) {
+        if (e instanceof Error && e.message === serviceErrors.NO_PENDING_ELIMINATION) return;
+        showAlert({
+          title: strings.ALERT_OPERATION_FAILED_TITLE,
+          message: e instanceof Error ? e.message : strings.GAME_ALERT_UNKNOWN_ERROR,
+        });
+      }
+    },
+    [id, showAlert],
+  );
+
+  const handleDenyPending = useCallback(
+    async (targetId: string, assassinId: string) => {
+      try {
+        await denyElimination(id!, targetId, assassinId);
+      } catch (e) {
+        if (e instanceof Error && e.message === serviceErrors.NO_PENDING_ELIMINATION) return;
+        showAlert({
+          title: strings.ALERT_OPERATION_FAILED_TITLE,
+          message: e instanceof Error ? e.message : strings.GAME_ALERT_UNKNOWN_ERROR,
+        });
+      }
+    },
+    [id, showAlert],
+  );
+
+  const pendingRows = useMemo(() => buildPendingRows(players), [players]);
+
   const navTabs = useMemo(() => {
     const tabs: { key: TabKey; label: string }[] = [];
     if (!isDead && !isSpectator && !isLobby) {
@@ -467,6 +572,16 @@ export default function GameRoomScreen() {
           isInfinite={isInfinite}
           killGoal={isInfinite ? getKillGoal(game) : undefined}
           onUpdateKillGoal={isInfinite ? handleUpdateKillGoal : undefined}
+          maxRerolls={game.maxRerolls}
+          onUpdateMaxRerolls={isInfinite ? handleUpdateMaxRerolls : undefined}
+          difficulty={game.difficultySetting}
+          onUpdateDifficulty={isInfinite ? handleUpdateDifficulty : undefined}
+          selectedPacks={game.selectedPacks}
+          availablePacks={isInfinite ? taskPacks : undefined}
+          onUpdatePacks={isInfinite ? handleUpdatePacks : undefined}
+          pendingRows={pendingRows}
+          onConfirmPending={handleConfirmPending}
+          onDenyPending={handleDenyPending}
         />
       );
     }

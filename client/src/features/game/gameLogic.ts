@@ -399,3 +399,33 @@ export function sortPlayersByLeaderboard(players: Player[], isInfinite = true): 
     return a.callsign.localeCompare(b.callsign);
   });
 }
+
+/** A single flattened row for the Host tab's Pending Confirmations panel (D7). */
+export interface PendingRow {
+  targetId: string;
+  targetCallsign: string;
+  assassinId: string;
+  assassinCallsign: string;
+  taskDescription: string;
+  claimedAt: number;
+}
+
+/**
+ * Flatten every player's `pendingEliminations[]` queue into a single global,
+ * FIFO-ordered list for the host panel: "assassin → target : mission". Pure —
+ * no Firebase, so it is trivially unit-testable and reusable from any caller.
+ */
+export function buildPendingRows(players: Player[]): PendingRow[] {
+  return players
+    .flatMap((p) =>
+      (p.pendingEliminations ?? []).map((e) => ({
+        targetId: p.uid,
+        targetCallsign: p.callsign,
+        assassinId: e.assassinId,
+        assassinCallsign: e.assassinCallsign,
+        taskDescription: e.taskDescription,
+        claimedAt: e.claimedAt,
+      })),
+    )
+    .sort((a, b) => a.claimedAt - b.claimedAt);
+}
