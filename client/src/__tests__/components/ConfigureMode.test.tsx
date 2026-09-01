@@ -9,7 +9,7 @@ const mockGetDoc = jest.fn().mockResolvedValue({
   data: () => ({
     id: 'TEST',
     hostId: 'host',
-    status: 'CONFIGURING',
+    status: 'LOBBY',
     playerIds: ['host'],
     createdAt: Date.now(),
     selectedPacks: ['basic_training'],
@@ -56,6 +56,68 @@ jest.mock('@/features/tasks/taskService', () => ({
 describe('ConfigureScreen mode toggle', () => {
   beforeEach(() => {
     mockUpdateDoc.mockClear();
+  });
+
+  it('preselects Infinite and Easy difficulty on a fresh doc with no mode yet (D4 defaults)', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: 'TEST',
+        hostId: 'host',
+        status: 'LOBBY',
+        playerIds: ['host'],
+        createdAt: Date.now(),
+        selectedPacks: ['basic_training'],
+        // No difficultySetting / mode yet — the fresh create-flow case.
+      }),
+    });
+
+    render(<ConfigureScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText(strings.CONFIGURE_MISSION_SUCCESS_LABEL)).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText(strings.CONFIGURE_AUTHORIZE_BUTTON));
+
+    await waitFor(() => {
+      expect(mockUpdateDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockUpdateDoc.mock.calls[0]?.[1];
+    expect(payload.mode).toBe('INFINITE');
+    expect(payload.difficultySetting).toBe('Easy');
+  });
+
+  it('shows Classic (not Infinite) when the loaded doc is explicitly Classic', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: 'TEST',
+        hostId: 'host',
+        status: 'LOBBY',
+        playerIds: ['host'],
+        createdAt: Date.now(),
+        selectedPacks: ['basic_training'],
+        difficultySetting: 'Mixed',
+        mode: 'CLASSIC',
+      }),
+    });
+
+    render(<ConfigureScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText(strings.CONFIGURE_MODE_ELIMINATION)).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText(strings.CONFIGURE_AUTHORIZE_BUTTON));
+
+    await waitFor(() => {
+      expect(mockUpdateDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockUpdateDoc.mock.calls[0]?.[1];
+    expect(payload.mode).toBe('CLASSIC');
   });
 
   it('shows enabled infinite option with score-attack sublabel', async () => {

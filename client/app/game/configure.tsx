@@ -106,10 +106,13 @@ export default function ConfigureScreen() {
   const [packs, setPacks] = useState<TaskPack[]>([]);
   const [selectedPackIds, setSelectedPackIds] = useState<string[]>(['basic_training']);
   const [expandedPackId, setExpandedPackId] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState('elimination');
+  // D4: defaults are Infinite + Easy so a fresh doc (no mode/difficulty yet — the
+  // create-flow case) preselects the intended default. Overwritten below (:139-148)
+  // once the loaded doc has explicit values.
+  const [gameMode, setGameMode] = useState('infinite');
   const [killGoal, setKillGoal] = useState(DEFAULT_INFINITE_KILL_GOAL);
   const [customKillGoal, setCustomKillGoal] = useState('');
-  const [difficulty, setDifficulty] = useState<DifficultySetting>('Mixed');
+  const [difficulty, setDifficulty] = useState<DifficultySetting>('Easy');
   const [maxRerolls, setMaxRerolls] = useState<number>(5);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -145,6 +148,11 @@ export default function ConfigureScreen() {
           if (!INFINITE_KILL_GOAL_OPTIONS.includes(goal as (typeof INFINITE_KILL_GOAL_OPTIONS)[number])) {
             setCustomKillGoal(String(goal));
           }
+        } else if (game.mode === 'CLASSIC') {
+          // Explicit Classic on the loaded doc must win over the component's
+          // Infinite-by-default state (D4) — only a doc with no mode yet (the
+          // fresh create-flow case) should show the default.
+          setGameMode('elimination');
         }
       } else if (availablePacks.some((p) => p.id === 'basic_training')) {
         setSelectedPackIds(['basic_training']);

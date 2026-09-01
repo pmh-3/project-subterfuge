@@ -42,7 +42,7 @@ export interface Player {
 export interface Game {
   id: string;
   hostId: string;
-  status: 'LOBBY' | 'CONFIGURING' | 'ACTIVE' | 'COMPLETED';
+  status: 'LOBBY' | 'ACTIVE' | 'COMPLETED';
   playerIds: string[];
   createdAt: number;
   winnerId?: string;

@@ -6,7 +6,13 @@ import { generateGameCode } from '@/utils/gameUtils';
 import { TASKS } from '@/data/tasks';
 import { getTasksFromPacks } from '@/features/tasks/taskService';
 import { DifficultySetting } from '@/types/taskPack';
-import { DEFAULT_AVATAR_ID, DEFAULT_MAX_REROLLS, MIN_PLAYERS_TO_START, MAX_PLAYERS } from '@/constants';
+import {
+  DEFAULT_AVATAR_ID,
+  DEFAULT_MAX_REROLLS,
+  DEFAULT_INFINITE_KILL_GOAL,
+  MIN_PLAYERS_TO_START,
+  MAX_PLAYERS,
+} from '@/constants';
 import {
   shufflePlayers,
   buildTargetChain,
@@ -40,7 +46,9 @@ export const createGame = async (hostId: string, hostCallsign: string, pin: stri
   const gameId = generateGameCode();
   const gameRef = doc(db, 'games', gameId);
   
-  // Create Game Doc
+  // Create Game Doc. Defaults to Infinite (D4) so any bypass of the configure
+  // screen (deep link, test, future caller) never yields a silent-Classic game.
+  // configure.tsx's handleAuthorize overwrites all of these when the host saves.
   const newGame: Game = {
     id: gameId,
     hostId,
@@ -48,8 +56,10 @@ export const createGame = async (hostId: string, hostCallsign: string, pin: stri
     playerIds: [hostId],
     createdAt: Date.now(),
     selectedPacks: ['basic_training'],
-    difficultySetting: 'Mixed',
+    difficultySetting: 'Easy',
     maxRerolls: DEFAULT_MAX_REROLLS,
+    mode: 'INFINITE',
+    infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: DEFAULT_INFINITE_KILL_GOAL } },
   };
   
   await setDoc(gameRef, newGame);

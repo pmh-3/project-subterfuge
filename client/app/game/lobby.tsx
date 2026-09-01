@@ -197,7 +197,9 @@ export default function LobbyScreen() {
 
   const handleRevealComplete = () => {
     if (pendingGameId) {
-      router.push(`/game/${pendingGameId}`);
+      // D4: settings first, then Create Game, then land in the lobby to invite.
+      // Use replace so Back from configure does not return to the reveal animation.
+      router.replace(`/game/configure?id=${pendingGameId}`);
     }
   };
 

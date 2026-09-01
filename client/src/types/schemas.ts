@@ -7,7 +7,7 @@ export const PlayerStatusSchema = z.enum([
   'WINNER',
 ]);
 
-export const GameStatusSchema = z.enum(['LOBBY', 'CONFIGURING', 'ACTIVE', 'COMPLETED']);
+export const GameStatusSchema = z.enum(['LOBBY', 'ACTIVE', 'COMPLETED']);
 
 export const DifficultySettingSchema = z.enum(['Mixed', 'Easy', 'Medium', 'Hard']);
 
