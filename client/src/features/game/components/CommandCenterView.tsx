@@ -1,15 +1,17 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Player } from '@/types';
-import { sortPlayersByLeaderboard } from '@/features/game/gameLogic';
+import { sortPlayersByLeaderboard, getDeathCount } from '@/features/game/gameLogic';
 import {
   Text,
   Stack,
+  Row,
   ScreenHeader,
   AgentRow,
   Card,
-  GameCodeTag,
   Button,
+  IconTarget,
+  IconSkull,
   colors,
   space,
 } from '@/design-system';
@@ -22,8 +24,6 @@ interface CommandCenterViewProps {
   hostId: string;
   winnerId?: string;
   isInfinite?: boolean;
-  gameId?: string;
-  onCopyGameCode?: () => void;
   onOpenInvite?: () => void;
 }
 
@@ -34,11 +34,11 @@ export const CommandCenterView = ({
   hostId,
   winnerId,
   isInfinite = false,
-  gameId,
-  onCopyGameCode,
   onOpenInvite,
 }: CommandCenterViewProps) => {
-  const sortedActive = isInfinite ? sortPlayersByLeaderboard(activePlayers) : activePlayers;
+  const sortedActive = isInfinite
+    ? sortPlayersByLeaderboard(activePlayers, isInfinite)
+    : activePlayers;
   const rosterTitle =
     isInfinite && winnerId
       ? strings.INTEL_INFINITE_WINNER_SUB
@@ -58,11 +58,30 @@ export const CommandCenterView = ({
     return playerMap.get(killerId)?.callsign || strings.INTEL_KILLER_UNKNOWN;
   };
 
-  const renderKillMetric = (killCount: number) => (
-    <Text variant="bodySmall" muted style={styles.metric}>
-      {dynamicStrings.eliminationCount(killCount || 0)}
-    </Text>
-  );
+  const renderScore = (player: Player) => {
+    const kills = player.killCount || 0;
+    const deaths = getDeathCount(player, isInfinite);
+    return (
+      <Row gap={5} align="center" style={styles.metric}>
+        <Row
+          gap={1}
+          align="center"
+          accessibilityLabel={`${kills} ${strings.INTEL_ELIMINATIONS_MADE}`}
+        >
+          <IconTarget size={14} color={colors.inkSecondary} />
+          <Text variant="body">{kills}</Text>
+        </Row>
+        <Row
+          gap={1}
+          align="center"
+          accessibilityLabel={`${deaths} ${strings.INTEL_TIMES_ELIMINATED}`}
+        >
+          <IconSkull size={14} color={colors.inkSecondary} />
+          <Text variant="body">{deaths}</Text>
+        </Row>
+      </Row>
+    );
+  };
 
   const renderRoster = (list: Player[], title: string, showEliminatedBy = false) => (
     <Stack gap={4}>
@@ -77,7 +96,7 @@ export const CommandCenterView = ({
               avatarId={player.avatarId}
               isYou={player.uid === currentUserId}
               isHost={player.uid === hostId}
-              trailing={renderKillMetric(player.killCount || 0)}
+              trailing={renderScore(player)}
             />
             {showEliminatedBy && player.eliminatedBy ? (
               <Text variant="bodySmall" color={colors.danger} style={styles.killedBy}>
@@ -116,18 +135,7 @@ export const CommandCenterView = ({
         </Card>
       ) : null}
 
-      <ScreenHeader
-        title={strings.INTEL_HEADER_TITLE}
-        trailing={
-          gameId && onCopyGameCode ? (
-            <GameCodeTag
-              code={gameId}
-              label={strings.GAME_CODE_LABEL}
-              onPress={onCopyGameCode}
-            />
-          ) : undefined
-        }
-      />
+      <ScreenHeader title={strings.INTEL_HEADER_TITLE} />
 
       <Stack gap={12} style={styles.roster}>
         {renderRoster(sortedActive, rosterTitle)}
@@ -175,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: space[4],
   },
   metric: {
-    textAlign: 'right',
+    justifyContent: 'flex-end',
   },
   roster: {
     marginTop: space[2],

@@ -377,10 +377,25 @@ export function validateAliveTargetChain(
   return { valid: errors.length === 0, errors };
 }
 
-export function sortPlayersByLeaderboard(players: Player[]): Player[] {
+/**
+ * Times-eliminated count for a player, mode-aware (D8). Infinite mode has no
+ * single-life status — a player respawns instantly on each kill, so their death
+ * count is the running `respawnCount`. Classic is single-life: exactly 1 once
+ * `ELIMINATED`, 0 otherwise.
+ */
+export function getDeathCount(
+  player: Pick<Player, 'respawnCount' | 'status'>,
+  isInfinite: boolean,
+): number {
+  return isInfinite ? player.respawnCount || 0 : player.status === 'ELIMINATED' ? 1 : 0;
+}
+
+export function sortPlayersByLeaderboard(players: Player[], isInfinite = true): Player[] {
   return [...players].sort((a, b) => {
     const killDiff = (b.killCount || 0) - (a.killCount || 0);
     if (killDiff !== 0) return killDiff;
+    const deathDiff = getDeathCount(a, isInfinite) - getDeathCount(b, isInfinite);
+    if (deathDiff !== 0) return deathDiff;
     return a.callsign.localeCompare(b.callsign);
   });
 }

@@ -6,6 +6,7 @@ import {
   validateIndependentTargets,
   isGameOver,
   sortPlayersByLeaderboard,
+  getDeathCount,
   buildTargetChain,
   shufflePlayers,
 } from '@/features/game/gameLogic';
@@ -398,6 +399,51 @@ describe('infinite mode pure logic (Option E — independent targets)', () => {
         makePlayer('c', 'Charlie', 'a', 'A', { killCount: 5 }),
       ]);
       expect(sorted.map((p) => p.uid)).toEqual(['c', 'a', 'b']);
+    });
+
+    it('tiebreaks equal kills by fewer deaths (infinite: respawnCount)', () => {
+      const sorted = sortPlayersByLeaderboard(
+        [
+          makePlayer('b', 'Bravo', 'a', 'A', { killCount: 3, respawnCount: 2 }),
+          makePlayer('a', 'Alpha', 'b', 'B', { killCount: 3, respawnCount: 0 }),
+        ],
+        true,
+      );
+      expect(sorted.map((p) => p.uid)).toEqual(['a', 'b']);
+    });
+
+    it('tiebreaks equal kills and deaths by callsign', () => {
+      const sorted = sortPlayersByLeaderboard(
+        [
+          makePlayer('b', 'Bravo', 'a', 'A', { killCount: 1, respawnCount: 1 }),
+          makePlayer('a', 'Alpha', 'b', 'B', { killCount: 1, respawnCount: 1 }),
+        ],
+        true,
+      );
+      expect(sorted.map((p) => p.uid)).toEqual(['a', 'b']);
+    });
+
+    it('tiebreaks by classic death status when isInfinite=false', () => {
+      const sorted = sortPlayersByLeaderboard(
+        [
+          makePlayer('b', 'Bravo', 'a', 'A', { killCount: 2, status: 'ELIMINATED' }),
+          makePlayer('a', 'Alpha', 'b', 'B', { killCount: 2, status: 'ALIVE' }),
+        ],
+        false,
+      );
+      expect(sorted.map((p) => p.uid)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('getDeathCount', () => {
+    it('returns respawnCount in infinite mode', () => {
+      expect(getDeathCount({ respawnCount: 3, status: 'ALIVE' }, true)).toBe(3);
+      expect(getDeathCount({ respawnCount: undefined, status: 'ALIVE' }, true)).toBe(0);
+    });
+
+    it('returns 1 iff ELIMINATED in classic mode', () => {
+      expect(getDeathCount({ respawnCount: 5, status: 'ELIMINATED' }, false)).toBe(1);
+      expect(getDeathCount({ respawnCount: 5, status: 'ALIVE' }, false)).toBe(0);
     });
   });
 

@@ -161,8 +161,6 @@ export const strings = {
   INTEL_KILLER_HOST: 'HOST',
   INTEL_KILLER_UNKNOWN: 'UNKNOWN AGENT',
   INTEL_CONFIRMED: 'CONFIRMED',
-  INTEL_ELIMINATIONS: 'Eliminations',
-  INTEL_ELIMINATION: 'Elimination',
   INTEL_ELIMINATIONS_MADE: 'Eliminations made',
   INTEL_TIMES_ELIMINATED: 'Times eliminated',
   INTEL_OPERATION_COMPLETE: 'GAME OVER',
@@ -237,8 +235,6 @@ export const dynamicStrings = {
   identityConflictSubtitle: (name: string) =>
     `"${name}" is already in this game on another device.\nEnter your Agent Key to reclaim that spot.`,
   swapsLeftThisGame: (n: number) => `${n} swap${n === 1 ? '' : 's'} left`,
-  eliminationCount: (n: number) =>
-    `${n} ${n === 1 ? strings.INTEL_ELIMINATION : strings.INTEL_ELIMINATIONS}`,
   deathCount: (n: number) => `${n} time${n === 1 ? '' : 's'}`,
   forceEliminateConfirm: (name: string) =>
     `Remove ${name} from the game? Their target will be reassigned to someone else.`,
