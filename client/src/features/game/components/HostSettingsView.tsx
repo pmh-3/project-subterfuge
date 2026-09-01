@@ -84,9 +84,7 @@ export const HostSettingsView = ({
   onDenyPending,
 }: HostSettingsViewProps) => {
   const router = useRouter();
-  const activePlayers = players.filter(
-    (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION',
-  );
+  const activePlayers = players.filter((p) => p.status === 'ALIVE');
   const standings = isInfinite ? sortPlayersByLeaderboard(activePlayers) : activePlayers;
 
   const togglePack = (packId: string) => {

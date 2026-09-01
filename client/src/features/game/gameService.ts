@@ -514,9 +514,7 @@ export const adminForceEliminate = async (gameId: string, targetId: string) => {
   const snapshot = await getDocs(playersRef);
   const players = snapshot.docs.map((d) => parsePlayerOrThrow(d.data()));
 
-  const assassin = players.find(
-    (p) => p.targetId === targetId && (p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION'),
-  );
+  const assassin = players.find((p) => p.targetId === targetId && p.status === 'ALIVE');
 
   if (!assassin) {
     const targetRef = doc(db, 'games', gameId, 'players', targetId);

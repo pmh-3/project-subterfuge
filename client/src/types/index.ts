@@ -26,7 +26,7 @@ export interface Player {
   uid: string;
   callsign: string;
   avatarId?: string; // Selected icon (e.g., 'icon-binoculars')
-  status: 'ALIVE' | 'PENDING_ELIMINATION' | 'ELIMINATED' | 'WINNER';
+  status: 'ALIVE' | 'ELIMINATED' | 'WINNER';
   targetId?: string;
   targetCallsign?: string;
   taskDescription?: string;

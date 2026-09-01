@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const PlayerStatusSchema = z.enum([
   'ALIVE',
-  'PENDING_ELIMINATION',
   'ELIMINATED',
   'WINNER',
 ]);

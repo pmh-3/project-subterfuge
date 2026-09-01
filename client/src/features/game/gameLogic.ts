@@ -309,9 +309,7 @@ export function isGameOver(
   }
 
   const goal = getKillGoal(game);
-  const inPlay = players.filter(
-    (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION',
-  );
+  const inPlay = players.filter((p) => p.status === 'ALIVE');
   const atGoal = inPlay.filter((p) => (p.killCount || 0) >= goal);
 
   if (atGoal.length === 1) {

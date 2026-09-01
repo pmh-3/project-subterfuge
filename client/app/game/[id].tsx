@@ -173,7 +173,7 @@ export default function GameRoomScreen() {
   }, [isHost, isInfinite]);
 
   const alivePlayers = players.filter(
-    (p) => p.status === 'ALIVE' || p.status === 'PENDING_ELIMINATION' || p.status === 'WINNER',
+    (p) => p.status === 'ALIVE' || p.status === 'WINNER',
   );
   const deadPlayers = players.filter((p) => p.status === 'ELIMINATED');
 
