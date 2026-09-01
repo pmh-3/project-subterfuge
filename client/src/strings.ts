@@ -223,7 +223,6 @@ export const strings = {
   // --- Host settings: roster chips ---
   HOST_CHIP_TARGET_PREFIX: 'TARGET:',
   HOST_CHIP_PENDING_PREFIX: 'PENDING:',
-  HOST_CHIP_SWAPS_PREFIX: 'SWAPS:',
 
   // --- Info / briefing ---
   INFO_TITLE: 'HOW TO PLAY',

@@ -27,8 +27,11 @@ jest.mock('firebase/firestore', () => ({
 
 jest.mock('@/services/firebase', () => ({ db: {} }));
 
+const mockRouterPush = jest.fn();
+const mockRouterReplace = jest.fn();
+
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useLocalSearchParams: () => ({ id: 'TEST' }),
 }));
 
@@ -56,6 +59,8 @@ jest.mock('@/features/tasks/taskService', () => ({
 describe('ConfigureScreen mode toggle', () => {
   beforeEach(() => {
     mockUpdateDoc.mockClear();
+    mockRouterPush.mockClear();
+    mockRouterReplace.mockClear();
   });
 
   it('preselects Infinite and Easy difficulty on a fresh doc with no mode yet (D4 defaults)', async () => {
@@ -118,6 +123,59 @@ describe('ConfigureScreen mode toggle', () => {
 
     const payload = mockUpdateDoc.mock.calls[0]?.[1];
     expect(payload.mode).toBe('CLASSIC');
+  });
+
+  it('redirects to the game (never renders the editable form) when the loaded game is ACTIVE', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: 'TEST',
+        hostId: 'host',
+        status: 'ACTIVE',
+        playerIds: ['host', 'p2'],
+        createdAt: Date.now(),
+        selectedPacks: ['basic_training'],
+        difficultySetting: 'Mixed',
+        mode: 'INFINITE',
+        infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: 5 } },
+      }),
+    });
+
+    render(<ConfigureScreen />);
+
+    await waitFor(() => {
+      expect(mockRouterReplace).toHaveBeenCalledWith('/game/TEST');
+    });
+
+    // Never shows the editable config — status:'LOBBY' / mode is never at risk
+    // of being written by a deep-linked visit to an already-ACTIVE game.
+    expect(screen.queryByText(strings.CONFIGURE_MODE_LABEL)).toBeNull();
+    expect(screen.queryByText(strings.CONFIGURE_AUTHORIZE_BUTTON)).toBeNull();
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('redirects to the game when the loaded game is COMPLETED', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({
+        id: 'TEST',
+        hostId: 'host',
+        status: 'COMPLETED',
+        playerIds: ['host', 'p2'],
+        createdAt: Date.now(),
+        selectedPacks: ['basic_training'],
+        difficultySetting: 'Mixed',
+        mode: 'INFINITE',
+        infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: 5 } },
+      }),
+    });
+
+    render(<ConfigureScreen />);
+
+    await waitFor(() => {
+      expect(mockRouterReplace).toHaveBeenCalledWith('/game/TEST');
+    });
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
   it('shows enabled infinite option with score-attack sublabel', async () => {

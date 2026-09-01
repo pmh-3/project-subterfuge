@@ -116,6 +116,14 @@ export default function ConfigureScreen() {
   const [maxRerolls, setMaxRerolls] = useState<number>(5);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Deep-link guard (D6): configure is a LOBBY-only screen. A host navigating
+  // directly here (bookmark/back/typed URL) while the game is ACTIVE or
+  // COMPLETED must not see the editable form or be able to write — that would
+  // let handleAuthorize revert the game to LOBBY and flip its mode mid-game,
+  // corrupting pending queues / respawn state. `redirecting` keeps the
+  // loading view up while we bounce back to the game screen.
+  const [gameStatus, setGameStatus] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     loadPacks();
@@ -132,6 +140,14 @@ export default function ConfigureScreen() {
 
       if (gameSnap.exists()) {
         const game = parseGameOrThrow(gameSnap.data());
+        setGameStatus(game.status);
+
+        if (game.status !== 'LOBBY') {
+          setRedirecting(true);
+          router.replace(`/game/${gameId}`);
+          return;
+        }
+
         if (game.selectedPacks?.length) {
           setSelectedPackIds(game.selectedPacks);
         } else if (availablePacks.some((p) => p.id === 'basic_training')) {
@@ -185,6 +201,14 @@ export default function ConfigureScreen() {
   };
 
   const handleAuthorize = async () => {
+    if (gameStatus !== 'LOBBY') {
+      // Defense in depth: never write status/mode-reverting fields once the
+      // loaded doc is known to be non-LOBBY, even if the render guard above
+      // were somehow bypassed (e.g. a stale status flip mid-visit).
+      router.replace(`/game/${gameId}`);
+      return;
+    }
+
     if (selectedPackIds.length === 0) {
       showAlert({
         title: strings.CONFIGURE_NO_PACKS_TITLE,
@@ -230,7 +254,7 @@ export default function ConfigureScreen() {
     }
   };
 
-  if (loading) {
+  if (loading || redirecting) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
