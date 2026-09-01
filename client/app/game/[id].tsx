@@ -85,6 +85,7 @@ export default function GameRoomScreen() {
   }, [id, showAlert]);
 
   const lastStatus = useRef<string | undefined>(undefined);
+  const didInitialTabSet = useRef(false);
   const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
@@ -153,6 +154,25 @@ export default function GameRoomScreen() {
     lastStatus.current = game.status;
   }, [game?.status, game, user?.uid]);
 
+  // Batch-2 #1: a hard refresh into an already-ACTIVE game never crosses the
+  // LOBBY→ACTIVE transition above, so it would otherwise stay on SITUATION. Run
+  // once, after loading completes: if the game is ACTIVE and the viewer is an
+  // alive participant, land them on their Mission (CONTRACT) tab. Dead/spectator/
+  // completed viewers can't see the Contract tab, so they are left on SITUATION.
+  useEffect(() => {
+    if (loading || didInitialTabSet.current || !game) return;
+    didInitialTabSet.current = true;
+    if (
+      game.status === 'ACTIVE' &&
+      me &&
+      !isDead &&
+      !isSpectator &&
+      !isCompleted
+    ) {
+      setActiveTab('CONTRACT');
+    }
+  }, [loading, game, me, isDead, isSpectator, isCompleted]);
+
   const isInfinite = game ? isInfiniteMode(game) : false;
 
   // D6: task packs for the Host tab's mid-game "Mission settings" section
@@ -176,6 +196,11 @@ export default function GameRoomScreen() {
     (p) => p.status === 'ALIVE' || p.status === 'WINNER',
   );
   const deadPlayers = players.filter((p) => p.status === 'ELIMINATED');
+  // Batch-2 #2: swap-target eligibility must match the service guard, which
+  // counts only ALIVE agents (WINNER/PENDING are not valid swap targets). Pass
+  // this stricter count to ContractView so the button's enabled state and the
+  // service's <3-agent no-op guard agree.
+  const strictlyAliveCount = players.filter((p) => p.status === 'ALIVE').length;
 
   const executeChallenge = async () => {
     try {
@@ -589,7 +614,9 @@ export default function GameRoomScreen() {
           onExit={handleLeaveGame}
           isInfinite={isInfinite}
           killGoal={isInfinite ? getKillGoal(game) : undefined}
-          onUpdateKillGoal={isInfinite ? handleUpdateKillGoal : undefined}
+          // Batch-2 #7: the kill goal is LOBBY-ONLY editable. Mid-game the host
+          // sees it read-only, so we stop passing the update handler once ACTIVE.
+          onUpdateKillGoal={isInfinite && isLobby ? handleUpdateKillGoal : undefined}
           maxRerolls={game.maxRerolls}
           onUpdateMaxRerolls={isInfinite ? handleUpdateMaxRerolls : undefined}
           difficulty={game.difficultySetting}
@@ -615,7 +642,7 @@ export default function GameRoomScreen() {
           onSwap={executeSwap}
           onSwapTarget={executeSwapTarget}
           isInfinite={isInfinite}
-          aliveCount={alivePlayers.length}
+          aliveCount={strictlyAliveCount}
           loading={actionLoading}
           maxRerolls={game.maxRerolls}
           showCoach={showCoach}

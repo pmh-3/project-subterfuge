@@ -32,15 +32,25 @@ const resolveAvailableTasks = async (gameData: Game): Promise<string[]> => {
   if (gameData.selectedPacks && gameData.selectedPacks.length > 0) {
     const difficulty = (gameData.difficultySetting || 'Mixed') as DifficultySetting;
     const taskObjects = await getTasksFromPacks(gameData.selectedPacks, difficulty);
-    if (taskObjects.length > 0) {
-      return taskObjects.map(t => t.text);
+    // Base the "non-empty" decision on tasks with USABLE (non-blank) text. If the
+    // remote pool has no usable tasks (e.g. all mission docs are malformed), fall
+    // through to the local TASKS pool, which is always well-formed.
+    const usable = taskObjects.map(t => t.text).filter((t) => typeof t === 'string' && t.trim().length > 0);
+    if (usable.length > 0) {
+      return usable;
     }
   }
   return [...TASKS];
 };
 
-const pickRandomTask = (tasks: string[]): string =>
-  tasks[Math.floor(Math.random() * tasks.length)];
+// Last line of defense: never return undefined/'' even if `tasks` is empty or
+// contains blanks. Firestore rejects undefined field writes, and a blank task
+// silently breaks the Contract/confirm flow, so we always yield a usable string.
+const pickRandomTask = (tasks: string[]): string => {
+  const usable = tasks.filter((t) => typeof t === 'string' && t.trim().length > 0);
+  const pool = usable.length > 0 ? usable : [...TASKS];
+  return pool[Math.floor(Math.random() * pool.length)]!;
+};
 
 export const createGame = async (hostId: string, hostCallsign: string, pin: string, avatarId?: string): Promise<string> => {
   const gameId = generateGameCode();
@@ -93,6 +103,15 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
   const playersSnap = await getDocs(playersRef);
   const players = playersSnap.docs.map(d => ({ id: d.id, data: parsePlayerOrThrow(d.data()) }));
 
+  // Batch-2 #6a — RECONNECT vs. NEW PLAYER:
+  // A matching callsign (+ correct PIN) is treated as a RECONNECT, by design. It
+  // works regardless of the player's status (ALIVE or ELIMINATED), the game mode,
+  // or phase — this is what lets an agent reclaim their session from a new device
+  // after being caught/removed. recoverIdentity() rewrites their doc to the new
+  // uid and repoints every reference. Assumption: emergencyPin is unique PER GAME
+  // (recoverIdentity's `where('emergencyPin', '==', pin)` lookup takes the first
+  // match), so two agents must not share a PIN in the same game; today PINs are
+  // not enforced-unique on write — see docs/BACKLOG.md.
   const existingPlayer = players.find(p => p.data.callsign.toUpperCase() === callsign.toUpperCase());
 
   if (existingPlayer) {
@@ -106,6 +125,10 @@ export const joinGame = async (gameId: string, playerId: string, callsign: strin
     return;
   }
 
+  // A NON-matching callsign is a brand-new, unrelated player. Creating a new player
+  // mid-game is allowed ONLY in INFINITE + ACTIVE; classic blocks it (a fixed
+  // Hamiltonian target cycle can't absorb a latecomer). In LOBBY, any new callsign
+  // simply joins.
   const canJoin =
     gameData.status === 'LOBBY' ||
     (isInfiniteMode(gameData) && gameData.status === 'ACTIVE');
@@ -367,13 +390,18 @@ const applyInfiniteElimination = (
   });
 
   const { over, winnerId } = isGameOver(game, playersAfter);
-  if (over && winnerId) {
+  // Batch-2 #4d — TIE BUG: isGameOver returns { over: true, winnerId: undefined }
+  // when several players are tied at/above the goal. The old guard `over && winnerId`
+  // silently left such a game ACTIVE. End the game whenever `over` is true; resolve
+  // the winner as the single top killer, or null (a draw) on an exact tie.
+  if (over) {
+    const resolvedWinnerId = winnerId ?? resolveTopKiller(playersAfter).winnerId;
     const gameRef = doc(db, 'games', gameId);
-    transaction.update(gameRef, { status: 'COMPLETED', winnerId });
+    transaction.update(gameRef, { status: 'COMPLETED', winnerId: resolvedWinnerId ?? null });
 
     for (const { id } of allPlayerDocs) {
       const pRef = doc(db, 'games', gameId, 'players', id);
-      if (id === winnerId) {
+      if (resolvedWinnerId && id === resolvedWinnerId) {
         transaction.update(pRef, {
           status: 'WINNER',
           targetId: null,

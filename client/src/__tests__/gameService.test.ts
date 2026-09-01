@@ -432,3 +432,101 @@ describe('swapTarget — no-op guard at 2 alive agents (defense in depth)', () =
     expect(p1.rerollsUsed).toBe(1);
   });
 });
+
+describe('applyInfiniteElimination — game ends when the goal is reached, even on a tie (batch-2 #4d)', () => {
+  const GAME_ID = 'G4';
+
+  // Kill goal is 3. 'a1' is one confirmed catch away from the goal; the seed varies
+  // 'x' so we can exercise both the exact-tie (draw) and single-top-killer paths.
+  const seedGame = (xKillCount: number): void => {
+    store.clear();
+
+    const game: Game = {
+      id: GAME_ID,
+      hostId: 'host',
+      status: 'ACTIVE',
+      playerIds: ['t', 'a1', 'x'],
+      createdAt: Date.now(),
+      mode: 'INFINITE',
+      infiniteConfig: { endCondition: { type: 'KILL_GOAL', value: 3 } },
+      selectedPacks: ['basic_training'],
+      difficultySetting: 'Mixed',
+      maxRerolls: 5,
+    };
+    store.set(`games/${GAME_ID}`, game);
+
+    const t: Player = {
+      uid: 't',
+      callsign: 'Target',
+      status: 'ALIVE',
+      targetId: 'x',
+      targetCallsign: 'Xray',
+      taskDescription: 'Existing directive',
+      killCount: 0,
+      respawnCount: 0,
+      rerollsUsed: 0,
+      pendingEliminations: [
+        { assassinId: 'a1', assassinCallsign: 'Alpha', taskDescription: 'task-a1', claimedAt: 100 },
+      ],
+    };
+    store.set(`games/${GAME_ID}/players/t`, t);
+
+    const a1: Player = {
+      uid: 'a1',
+      callsign: 'Alpha',
+      status: 'ALIVE',
+      targetId: 't',
+      targetCallsign: 'Target',
+      taskDescription: 'task-a1',
+      killCount: 2, // +1 on confirm -> 3 == goal
+      respawnCount: 0,
+      rerollsUsed: 0,
+    };
+    store.set(`games/${GAME_ID}/players/a1`, a1);
+
+    const x: Player = {
+      uid: 'x',
+      callsign: 'Xray',
+      status: 'ALIVE',
+      targetId: 'a1',
+      targetCallsign: 'Alpha',
+      taskDescription: 'task-x',
+      killCount: xKillCount,
+      respawnCount: 0,
+      rerollsUsed: 0,
+    };
+    store.set(`games/${GAME_ID}/players/x`, x);
+  };
+
+  it('exact tie at the goal ends the game as a draw (winnerId null), not silently ACTIVE', async () => {
+    // a1 -> 3 and x already at 3: two agents tied at the goal. isGameOver reports
+    // over:true with winnerId undefined; the old `over && winnerId` guard left the
+    // game ACTIVE forever. It must now COMPLETE, as a draw.
+    seedGame(3);
+
+    await confirmElimination(GAME_ID, 't', 'a1');
+
+    const game = store.get(`games/${GAME_ID}`) as Game;
+    expect(game.status).toBe('COMPLETED');
+    expect(game.winnerId).toBeNull();
+
+    // Every player is finalized to ELIMINATED (no winner on a draw).
+    for (const pid of ['t', 'a1', 'x']) {
+      expect((store.get(`games/${GAME_ID}/players/${pid}`) as Player).status).toBe('ELIMINATED');
+    }
+  });
+
+  it('multiple agents at the goal with a single leader ends the game and crowns the top killer', async () => {
+    // a1 -> 3, x already at 4: both at/above goal, but x leads. The winnerId ??
+    // resolveTopKiller fallback must crown x.
+    seedGame(4);
+
+    await confirmElimination(GAME_ID, 't', 'a1');
+
+    const game = store.get(`games/${GAME_ID}`) as Game;
+    expect(game.status).toBe('COMPLETED');
+    expect(game.winnerId).toBe('x');
+    expect((store.get(`games/${GAME_ID}/players/x`) as Player).status).toBe('WINNER');
+    expect((store.get(`games/${GAME_ID}/players/a1`) as Player).status).toBe('ELIMINATED');
+  });
+});

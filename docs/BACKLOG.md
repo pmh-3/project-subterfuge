@@ -48,6 +48,8 @@ Infrastructure and code quality improvements that make the codebase more maintai
 
 - [ ] **DEBT-7: Remove `game.playerIds[]` redundancy** — The `playerIds` array on the game document is maintained separately from the `players` subcollection and can diverge. Either deprecate the array and query the subcollection, or keep them in sync within transactions.
 
+- [ ] **DEBT-8: Rejoin-as-removed / callsign identity edge case** — `joinGame` treats a matching callsign (+ correct PIN) as a *reconnect*, regardless of the player's status. This means a force-removed or eliminated agent who re-enters with their original callsign reclaims their (eliminated) session rather than joining fresh, and a non-matching callsign silently creates a *new* player (only in INFINITE + ACTIVE). Two risks: (1) `recoverIdentity` looks up the session by `emergencyPin` and takes the first match, so per-game PIN uniqueness is assumed but **not enforced on write** — two agents sharing a PIN in one game could cross-reclaim; (2) there is no "you're joining as a new agent, not reconnecting" confirmation when a returning player deliberately picks a fresh callsign. **Future directions:** enforce per-game PIN uniqueness at join time; add an explicit new-vs-reconnect confirmation on a non-matching callsign; consider disallowing reclaim of an ELIMINATED session in classic mode. Host-side mitigation shipped in batch 2: eliminated agents now appear in an INACTIVE AGENTS roster section so a removed player no longer looks like it vanished.
+
 ---
 
 ## Feature Work

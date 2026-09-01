@@ -102,9 +102,9 @@ jest.mock('@/features/game/useGame', () => ({
   }),
 }));
 
-async function goToContractTab() {
-  fireEvent.press(screen.getByText(strings.GAME_TAB_CONTRACT));
-}
+// Batch-2 #1: a refresh into an already-ACTIVE game now lands an alive
+// participant directly on the Contract (MISSION) tab, so no manual tab press is
+// needed to reach the Contract view any more.
 
 describe('Coach card storage gating on the Contract tab (D9, #9)', () => {
   beforeEach(() => {
@@ -119,8 +119,8 @@ describe('Coach card storage gating on the Contract tab (D9, #9)', () => {
 
     await waitFor(() => expect(storageGet).toHaveBeenCalledWith('coach_contract_seen'));
 
-    await goToContractTab();
-
+    // The screen auto-lands on the Contract tab (batch-2 #1), so the coach card
+    // appears without navigating.
     expect(await screen.findByText(strings.COACH_CONTRACT_TITLE)).toBeTruthy();
 
     fireEvent.press(screen.getByText(strings.COACH_DISMISS));
@@ -135,8 +135,6 @@ describe('Coach card storage gating on the Contract tab (D9, #9)', () => {
     render(<GameRoomScreen />);
 
     await waitFor(() => expect(storageGet).toHaveBeenCalledWith('coach_contract_seen'));
-
-    await goToContractTab();
 
     expect(await screen.findByText(strings.CONTRACT_NEUTRALIZE_TARGET)).toBeTruthy();
     expect(screen.queryByText(strings.COACH_CONTRACT_TITLE)).toBeNull();
