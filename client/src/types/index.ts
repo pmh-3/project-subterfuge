@@ -36,6 +36,7 @@ export interface Player {
   killCount?: number;
   respawnCount?: number;
   rerollsUsed?: number;
+  joinedMidGame?: boolean; // true only for players who joined an already-ACTIVE game
   emergencyPin?: string; // 3-digit Agent Key for identity recovery
 }
 
