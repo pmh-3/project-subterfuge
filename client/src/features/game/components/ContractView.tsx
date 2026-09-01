@@ -17,6 +17,7 @@ import {
 } from '@/design-system';
 import { strings, dynamicStrings } from '@/strings';
 import { DEFAULT_MAX_REROLLS } from '@/constants';
+import { CoachCard } from '@/features/game/components/CoachCard';
 
 interface ContractViewProps {
   player: Player;
@@ -30,6 +31,9 @@ interface ContractViewProps {
   aliveCount?: number;
   loading?: boolean;
   maxRerolls?: number;
+  /** First-run coach card (D9, #9). Visibility/persistence owned by the caller. */
+  showCoach?: boolean;
+  onDismissCoach?: () => void;
 }
 
 export const ContractView = ({
@@ -43,6 +47,8 @@ export const ContractView = ({
   aliveCount,
   loading,
   maxRerolls,
+  showCoach,
+  onDismissCoach,
 }: ContractViewProps) => {
   const effectiveMaxRerolls = maxRerolls ?? DEFAULT_MAX_REROLLS;
   const rerollsLeft = effectiveMaxRerolls - (player.rerollsUsed || 0);
@@ -55,6 +61,8 @@ export const ContractView = ({
   return (
     <View style={styles.container}>
       <ScreenHeader title={strings.CONTRACT_HEADER_TITLE} />
+
+      {showCoach && onDismissCoach ? <CoachCard onDismiss={onDismissCoach} /> : null}
 
       <Card folderTab={strings.CONTRACT_TAB} dossier>
         <Stack gap={7}>
@@ -101,7 +109,10 @@ export const ContractView = ({
                     loading={loading}
                   />
                 ) : null}
-                <Text variant="labelMicro" muted style={styles.swapHint}>
+                <Text variant="labelMicro" muted style={styles.hint}>
+                  {strings.CONTRACT_SWAP_HINT}
+                </Text>
+                <Text variant="labelMicro" muted style={styles.hint}>
                   {rerollsLeft > 0
                     ? dynamicStrings.swapsLeftThisGame(rerollsLeft)
                     : strings.NO_MORE_SWAPS}
@@ -119,14 +130,19 @@ export const ContractView = ({
               </Text>
             </View>
           ) : (
-            <Button
-              title={strings.CONTRACT_NEUTRALIZE_TARGET}
-              onPress={onLogKill}
-              variant="danger"
-              fullWidth
-              loading={loading}
-              disabled={loading}
-            />
+            <Stack gap={3}>
+              <Button
+                title={strings.CONTRACT_NEUTRALIZE_TARGET}
+                onPress={onLogKill}
+                variant="danger"
+                fullWidth
+                loading={loading}
+                disabled={loading}
+              />
+              <Text variant="labelMicro" muted style={styles.hint}>
+                {strings.CONTRACT_NEUTRALIZE_HINT}
+              </Text>
+            </Stack>
           )}
         </Stack>
       </Card>
@@ -147,7 +163,7 @@ const styles = StyleSheet.create({
   swapAction: {
     marginTop: space[6],
   },
-  swapHint: {
+  hint: {
     textAlign: 'center',
   },
   pendingPanel: {

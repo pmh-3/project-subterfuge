@@ -152,3 +152,101 @@ describe('ContractView swap controls', () => {
     );
   });
 });
+
+describe('ContractView plain-language hints (D9, #9)', () => {
+  it('shows a subtitle under CATCH TARGET explaining what the tap means', () => {
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending={false}
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+      />,
+    );
+
+    expect(screen.getByText(strings.CONTRACT_NEUTRALIZE_TARGET)).toBeTruthy();
+    expect(screen.getByText(strings.CONTRACT_NEUTRALIZE_HINT)).toBeTruthy();
+  });
+
+  it('shows a subtitle under the swap controls clarifying swaps are limited', () => {
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending={false}
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+      />,
+    );
+
+    expect(screen.getByText(strings.CONTRACT_SWAP_HINT)).toBeTruthy();
+  });
+});
+
+describe('ContractView coach card (D9, #9)', () => {
+  it('renders the coach card when showCoach is true', () => {
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending={false}
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+        showCoach
+        onDismissCoach={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText(strings.COACH_CONTRACT_TITLE)).toBeTruthy();
+  });
+
+  it('does not render the coach card when showCoach is false', () => {
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending={false}
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+        showCoach={false}
+        onDismissCoach={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(strings.COACH_CONTRACT_TITLE)).toBeNull();
+  });
+
+  it('calls onDismissCoach when GOT IT is pressed', () => {
+    const onDismissCoach = jest.fn();
+    render(
+      <ContractView
+        player={makePlayer()}
+        isPending={false}
+        onLogKill={jest.fn()}
+        onSwap={jest.fn()}
+        onSwapTarget={jest.fn()}
+        isInfinite
+        aliveCount={4}
+        maxRerolls={5}
+        showCoach
+        onDismissCoach={onDismissCoach}
+      />,
+    );
+
+    fireEvent.press(screen.getByText(strings.COACH_DISMISS));
+    expect(onDismissCoach).toHaveBeenCalledTimes(1);
+  });
+});

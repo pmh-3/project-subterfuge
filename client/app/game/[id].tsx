@@ -68,6 +68,7 @@ export default function GameRoomScreen() {
   const [showForceEliminate, setShowForceEliminate] = useState(false);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
   const [taskPacks, setTaskPacks] = useState<TaskPack[]>([]);
+  const [showCoach, setShowCoach] = useState(false);
 
   const handleStart = useCallback(async () => {
     try {
@@ -292,6 +293,22 @@ export default function GameRoomScreen() {
     };
     void checkMidJoinBanner();
   }, [game, me, id, isInfinite, showTransientBanner]);
+
+  // First-run coach card (D9, #9): a one-time, global (not per-game) summary
+  // of the core loop, shown the first time a player lands on the Contract
+  // tab. Mirrors the mid-join-banner storage-gating pattern above.
+  useEffect(() => {
+    const checkCoachSeen = async () => {
+      const seen = await storage.get('coach_contract_seen');
+      if (!seen) setShowCoach(true);
+    };
+    void checkCoachSeen();
+  }, []);
+
+  const handleDismissCoach = useCallback(() => {
+    setShowCoach(false);
+    void storage.save('coach_contract_seen', '1');
+  }, []);
 
   const copyText = useCallback(
     async (text: string, confirmation: string) => {
@@ -600,6 +617,8 @@ export default function GameRoomScreen() {
           aliveCount={alivePlayers.length}
           loading={actionLoading}
           maxRerolls={game.maxRerolls}
+          showCoach={showCoach}
+          onDismissCoach={handleDismissCoach}
         />
       );
     }

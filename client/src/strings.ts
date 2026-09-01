@@ -155,7 +155,15 @@ export const strings = {
   CONTRACT_MISSION_OBJECTIVE: 'MISSION',
   CONTRACT_PENDING_CONFIRMATION: 'PENDING CONFIRMATION',
   CONTRACT_NEUTRALIZE_TARGET: 'CATCH TARGET',
+  CONTRACT_NEUTRALIZE_HINT: 'Tap once your mission on them succeeds.',
+  CONTRACT_SWAP_HINT: 'Trade this mission or target for a new one — swaps are limited.',
   NO_MORE_SWAPS: 'No swaps left this game.',
+
+  // --- First-run coach card (D9, #9) ---
+  COACH_CONTRACT_TITLE: 'HOW THIS WORKS',
+  COACH_CONTRACT_BODY:
+    "You have a secret target and a mission for them to complete. Get them to do it, then tap CATCH TARGET to confirm the catch. Keep going until you're the last agent standing — or you hit the score to win.",
+  COACH_DISMISS: 'GOT IT',
 
   // --- Command center / Situation room ---
   INTEL_KILLER_HOST: 'HOST',
